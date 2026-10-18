@@ -562,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-P</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-Q</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -1391,7 +1391,7 @@ const imgCache={};
 function getImg(key){if(!images[key])return null;let im=imgCache[key];if(!im){im=new Image();im.onload=()=>{draw();renderLayers()};im.src=images[key];imgCache[key]=im}return im}
 function ingest(file){return new Promise(res=>{if(!file.type.startsWith('image/'))return res(null);const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{let w=im.naturalWidth,h=im.naturalHeight,url=fr.result;const max=2400;if(Math.max(w,h)>max){const k=max/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k);const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);url=c.toDataURL(file.type==='image/jpeg'?'image/jpeg':'image/png',.9)}const key='img'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);images[key]=url;uploads.unshift(key);renderUploads();res({key,w,h})};im.onerror=()=>res(null);im.src=fr.result};fr.readAsDataURL(file)})}
 function placeImage(key,w,h,at,above){const c=at||viewCenter();const k=Math.min(doc.w*.6/w,doc.h*.6/h,1);const o=I(c[0]-w*k/2,c[1]-h*k/2,w*k,h*k,{src:key,fit:'contain',name:'Image'});pushHist();putAbove(o,above);sel=[o.id];renderAll();}
-function putAbove(o,ref){if(ref&&objs.includes(ref)){if(ref.gid)o.gid=ref.gid;objs.splice(objs.indexOf(ref)+1,0,o)}else objs.push(o)}
+function putAbove(o,ref){if(ref&&objs.includes(ref)){if(ref.gid)o.gid=ref.gid;let at=objs.indexOf(ref)+1;if(!o.clip)while(objs[at]&&objs[at].clip)at++;objs.splice(at,0,o)}else objs.push(o)}
 /* what to do when a picture is dropped at point p */
 function dropPicture(key,w,h,p){
  const top=p?hitTop(p[0],p[1],o=>!isBgLayer(o)):null,hit=p?hitTop(p[0],p[1],o=>!isBgLayer(o)&&o.type!=='text'):null;
@@ -2576,7 +2576,7 @@ L.addEventListener('drop',e=>{e.preventDefault();if(layerPayload&&layerPayload.f
  const above=li.classList.contains('dropTop');const moving=src.startsWith('g:')?objs.filter(o=>o.gid===src.slice(2)):[getObj(src)].filter(Boolean);if(!moving.length){renderLayers();return}
  const tgt=li.dataset.gid?objs.filter(o=>o.gid===li.dataset.gid):[getObj(li.dataset.id)].filter(Boolean);if(!tgt.length||tgt.some(t=>moving.includes(t))){renderLayers();return}
  pushHist();if(!src.startsWith('g:')){const t=tgt[0];if(li.classList.contains('child'))moving[0].gid=t.gid;else delete moving[0].gid}
- objs=objs.filter(o=>!moving.includes(o));const idx=tgt.map(t=>objs.indexOf(t));const ti=above?Math.max(...idx)+1:Math.min(...idx);objs.splice(ti,0,...moving);renderAll()});
+ objs=objs.filter(o=>!moving.includes(o));const idx=tgt.map(t=>objs.indexOf(t));let ti=above?Math.max(...idx)+1:Math.min(...idx);if(!moving.some(m=>m.clip))while(objs[ti]&&objs[ti].clip)ti++;objs.splice(ti,0,...moving);renderAll()});
 L.addEventListener('dragend',()=>{dragLayer=null;$$('#layers li').forEach(l=>l.classList.remove('dropTop','dropBot'))});
 const fxM=$('#fxMenu'),nwM=$('#newMenu');
 function closeMenus(){fxM.hidden=nwM.hidden=true;$$('.layerbar button').forEach(b=>b.classList.remove('open'))}
