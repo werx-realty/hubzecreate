@@ -562,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-S</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-T</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -2289,7 +2289,10 @@ function nudge(dx,dy){const os=withBurn(sel.map(getObj).filter(o=>o&&!o.locked))
 function loadTemplate(t){pushHist();if(editing)endEdit();doc.w=t.w;doc.h=t.h;doc.bg=t.bg||'#ffffff';doc.name=t.name;doc.web=t.web||null;
  if(t.build){objs=t.build();doc.groups=t.groups?t.groups():autoGroup(objs);mirrorOrder()}else{Object.assign(images,t.images||{});objs=t.objs.map(o=>({...o,id:'o'+(uid++)}));doc.groups=JSON.parse(JSON.stringify(t.groups||[]))}
  sel=[];syncDocUI();fit();renderAll();toast(`${t.name} loaded. Ctrl+Z to go back.`)}
-function mirrorOrder(){const bg=objs.filter(isBgLayer),rest=objs.filter(o=>!isBgLayer(o));const units=[];const seen=new Map();
+function adoptLoose(){const secs=groups().map(g=>{const m=objs.filter(o=>o.gid===g.id&&o.visible);if(!m.length)return null;const b=bounds(m);return b.r-b.l>=doc.w*.85?{g,b}:null}).filter(Boolean);if(!secs.length)return;
+ objs.forEach(o=>{if(o.gid||isBgLayer(o)||o.clip)return;const a=aabb(o),cy=(a.t+a.b)/2;if(a.b-a.t>doc.h*.6)return;const s=secs.find(x=>cy>=x.b.t-1&&cy<=x.b.b+1);if(s)o.gid=s.g.id});
+ objs.forEach((o,i)=>{if(o.clip&&i>0&&!o.gid){let j=i-1;while(j>=0&&objs[j].clip)j--;if(j>=0&&objs[j].gid)o.gid=objs[j].gid}})}
+function mirrorOrder(){adoptLoose();const bg=objs.filter(isBgLayer),rest=objs.filter(o=>!isBgLayer(o));const units=[];const seen=new Map();
  rest.forEach(o=>{if(o.gid){if(!seen.has(o.gid)){const u={ids:[]};seen.set(o.gid,u);units.push(u)}seen.get(o.gid).ids.push(o)}else units.push({ids:[o]})});
  units.forEach(u=>u.b=bounds(u.ids.filter(o=>o.visible).length?u.ids.filter(o=>o.visible):u.ids));
  const ov=(a,b)=>a.l<b.r-1&&a.r>b.l+1&&a.t<b.b-1&&a.b>b.t+1;
@@ -2532,7 +2535,7 @@ function drawLayerThumbs(){const W=44,H=36,d=2,k=Math.min(W/doc.w,H/doc.h),ox=(W
   try{list.forEach(o=>drawObj(x,{...o,id:'lt'+o.id,visible:true,_editing:false},true,k*d))}catch(err){console.error(err)}
   x.restore();x.strokeStyle='rgba(0,0,0,.35)';x.lineWidth=1;x.strokeRect(ox+.5,oy+.5,doc.w*k-1,doc.h*k-1)})}
 function renderLayers(){const gs=groups();const sk=sel.join(',');const selChanged=sk!==lastSelKey;lastSelKey=sk;
- if(selChanged)for(const g of gs){const mem=objs.filter(o=>o.gid===g.id);const some=mem.some(m=>sel.includes(m.id)),all=mem.every(m=>sel.includes(m.id));if(some&&!all)g.open=true}const live=new Set(objs.map(o=>o.gid).filter(Boolean));doc.groups=gs.filter(g=>live.has(g.id));objs.forEach(o=>{if(o.gid&&!getGroup(o.gid))delete o.gid});
+ if(selChanged)for(const g of gs){const mem=objs.filter(o=>o.gid===g.id);const some=mem.some(m=>sel.includes(m.id)),all=mem.every(m=>sel.includes(m.id));if(some){if(!g.open)g._auto=true;g.open=true}else if(g._auto){g.open=false;delete g._auto}}const live=new Set(objs.map(o=>o.gid).filter(Boolean));doc.groups=gs.filter(g=>live.has(g.id));objs.forEach(o=>{if(o.gid&&!getGroup(o.gid))delete o.gid});
  const seen=new Set();let h='';
  for(const o of [...objs].reverse()){if(o.gid){if(seen.has(o.gid))continue;seen.add(o.gid);const g=getGroup(o.gid),mem=objs.filter(x=>x.gid===g.id).reverse(),allSel=mem.every(m=>sel.includes(m.id)),vis=mem.some(m=>m.visible);
    h+=`<li class="grp${allSel?' on':mem.some(m=>sel.includes(m.id))?' has':''}" draggable="true" data-gid="${g.id}"><button class="eye ${vis?'':'off'}" data-la2="gvis" title="Show / hide group">${EYE}</button><button class="car" data-la2="gopen" title="${g.open?'Collapse':'Expand'}">${g.open?'▾':'▸'}</button><span class="lt"><canvas data-lt="g:${g.id}"></canvas></span><span class="ln">${esc(g.name)}</span><small class="gc">${mem.length}</small><button class="lk ${mem.every(m=>m.locked)?'on':''}" data-la2="glock" title="Lock group">${LOCK}</button></li>`;
@@ -2555,7 +2558,7 @@ L.addEventListener('click',e=>{const li=e.target.closest('li');if(!li)return;if(
   if(a==='gopen'){g.open=!g.open;renderLayers();return}
   if(a==='glock'){pushHist();const v=!mem.every(m=>m.locked);mem.forEach(m=>m.locked=v);if(v)sel=sel.filter(i=>!mem.some(m=>m.id===i));renderAll();return}
   if(a==='gvis'){pushHist();const v=!mem.some(m=>m.visible);mem.forEach(m=>m.visible=v);renderAll();return}
-  if(e.target.isContentEditable)return;const ids=mem.filter(m=>!m.locked).map(m=>m.id);if(e.target.closest('.ln')&&ids.length&&ids.every(i=>sel.includes(i))&&sel.length===ids.length){startRename(e.target.closest('.ln'));return}sel=(e.shiftKey||e.metaKey||e.ctrlKey)?[...new Set([...sel,...ids])]:ids;renderAll();return}
+  if(e.target.isContentEditable)return;const ids=mem.filter(m=>!m.locked).map(m=>m.id);if(e.target.closest('.ln')&&ids.length&&ids.every(i=>sel.includes(i))&&sel.length===ids.length){startRename(e.target.closest('.ln'));return}const was=ids.length&&ids.every(i=>sel.includes(i))&&sel.length===ids.length;sel=(e.shiftKey||e.metaKey||e.ctrlKey)?[...new Set([...sel,...ids])]:ids;lastSelKey=sel.join(',');g.open=was?!g.open:true;delete g._auto;renderAll();return}
  if(li.dataset.fxof){const o=getObj(li.dataset.fxof);if(!o)return;
   if(a==='fxall'){pushHist();o.fxOff=!o.fxOff;renderAll();return}
   if(a==='fxone'){pushHist();o.fx=JSON.parse(JSON.stringify(o.fx));const k=li.dataset.fxk;o.fx[k].on=!o.fx[k].on;if(o.fx[k].on)o.fxOff=false;renderAll();return}
@@ -3613,6 +3616,7 @@ let lsStamp=0;try{lsStamp=(JSON.parse(localStorage.getItem('afs:doc')||'null')||
 IDB.get('doc').then(s=>{if(!s||!s.doc||!s.objs||!(s.t>lsStamp)||saveStamp>s.t)return;Object.assign(images,s.images||{});(s.uploads||[]).forEach(([k,v])=>{images[k]=v;if(!uploads.includes(k))uploads.push(k)});
  const ts=Array.isArray(s.tabs)&&s.tabs.length?s.tabs:[{doc:s.doc,objs:s.objs}];tabs=ts.map(t=>({doc:t.doc,objs:t.objs,undoS:[],redoS:[],sel:[],view:null}));tabs.forEach(t=>{objs=t.objs;fixUid();if(!Array.isArray(t.doc.groups))t.doc.groups=autoGroup(t.objs)});useTab(clamp(s.cur||0,0,tabs.length-1));try{renderUploads()}catch{}renderAll()}).catch(()=>{});
 collapsed=new Set(allCats());
+try{adoptLoose()}catch{}
 syncDocUI();renderElements();renderSections();renderTemplates();renderUploads();
 requestAnimationFrame(()=>{resize();fit();renderAll()});
 const fontJobs=FONTS.flatMap(f=>['400','700'].map(w=>document.fonts.load(`${w} 20px "${f}"`).catch(()=>{})));
