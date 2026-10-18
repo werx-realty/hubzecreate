@@ -562,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-R</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-S</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -2307,6 +2307,9 @@ function insertSection(id,atY){const sc=typeof id==='object'?id:SECTIONS.find(s=
  list.forEach(o=>o.y+=Y);const gid='g'+Date.now().toString(36);list.forEach(o=>o.gid=gid);groups().push({id:gid,name:sc.name,open:false});
  const at=before.length?Math.max(...before.map(o=>objs.indexOf(o)))+1:Math.max(0,objs.findIndex(o=>!isBgLayer(o)));objs.splice(at<0?objs.length:at,0,...list);mirrorOrder();
  sel=list.map(o=>o.id);syncDocUI();renderAll();toast(`${sc.name} added. Everything below moved down ${Math.round(h)}px.`)}
+const isSectionBlock=m=>{const v=m.filter(o=>o.visible);if(!v.length)return false;const b=bounds(v);return b.r-b.l>=doc.w*.85};
+function restackSections(){const blocks=groups().map(g=>{const m=objs.filter(o=>o.gid===g.id);return m.length&&isSectionBlock(m)?{m,b:bounds(m.filter(o=>o.visible)),z:Math.max(...m.map(o=>objs.indexOf(o)))}:null}).filter(Boolean);if(blocks.length<2)return;
+ let y=Math.min(...blocks.map(x=>x.b.t));blocks.sort((a,b)=>b.z-a.z).forEach(x=>{const dy=y-x.b.t;x.m.forEach(o=>o.y+=dy);y+=x.b.b-x.b.t});mirrorOrder();toast('Section moved')}
 function moveSection(dir){const ss=objs.filter(o=>sel.includes(o.id));if(!ss.length)return;
  const gid=ss[0].gid,mineObjs=gid?objs.filter(o=>o.gid===gid):ss,mb=bounds(mineObjs);
  const blocks=groups().filter(g=>g.id!==gid).map(g=>{const m=objs.filter(o=>o.gid===g.id);return m.length?{m,b:bounds(m)}:null}).filter(Boolean).filter(x=>x.b.r-x.b.l>=doc.w*.5);
@@ -2576,7 +2579,7 @@ L.addEventListener('drop',e=>{e.preventDefault();if(layerPayload&&layerPayload.f
  const above=li.classList.contains('dropTop');const moving=src.startsWith('g:')?objs.filter(o=>o.gid===src.slice(2)):[getObj(src)].filter(Boolean);if(!moving.length){renderLayers();return}
  const tgt=li.dataset.gid?objs.filter(o=>o.gid===li.dataset.gid):[getObj(li.dataset.id)].filter(Boolean);if(!tgt.length||tgt.some(t=>moving.includes(t))){renderLayers();return}
  pushHist();if(!src.startsWith('g:')){const t=tgt[0];if(li.classList.contains('child'))moving[0].gid=t.gid;else delete moving[0].gid}
- objs=objs.filter(o=>!moving.includes(o));const idx=tgt.map(t=>objs.indexOf(t));let ti=above?Math.max(...idx)+1:Math.min(...idx);if(!moving.some(m=>m.clip))while(objs[ti]&&objs[ti].clip)ti++;objs.splice(ti,0,...moving);renderAll()});
+ objs=objs.filter(o=>!moving.includes(o));const idx=tgt.map(t=>objs.indexOf(t));let ti=above?Math.max(...idx)+1:Math.min(...idx);if(!moving.some(m=>m.clip))while(objs[ti]&&objs[ti].clip)ti++;objs.splice(ti,0,...moving);if(src.startsWith('g:')&&isSectionBlock(moving))restackSections();renderAll()});
 L.addEventListener('dragend',()=>{dragLayer=null;$$('#layers li').forEach(l=>l.classList.remove('dropTop','dropBot'))});
 const fxM=$('#fxMenu'),nwM=$('#newMenu');
 function closeMenus(){fxM.hidden=nwM.hidden=true;$$('.layerbar button').forEach(b=>b.classList.remove('open'))}
