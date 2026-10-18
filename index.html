@@ -562,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-L</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-N</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -1666,7 +1666,7 @@ function drawShape(c,o,exp){
   case 'text':{c.shadowColor=o.shadow?'rgba(0,0,0,.35)':'transparent';c.fillStyle=o.fill;if(warpOn(o)){paintWarp(c,o);break}paintText(c,o,'fill',0);break}
   case 'image':{c.beginPath();if(o.circle)c.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);else rr(c,x,y,w,h,o.radius);
    const live=liveMap.get(o.id),im=live||(o.src&&getImg(o.src)),IW=live?live.width:(im&&im.complete?im.naturalWidth:0),IH=live?live.height:(im?im.naturalHeight:0);
-   if(im&&IW){if(o.shadow){c.fillStyle='rgba(0,0,0,.01)';c.fill()}c.shadowColor='transparent';c.save();c.clip();const ir=IW/IH,br=w/h;let dw,dh;if((o.fit==='contain')===(ir>br)){dw=w;dh=w/ir}else{dh=h;dw=h*ir}let pim=im;if(!live&&hasPE(o))try{pim=peRender(o,im)}catch(err){console.error(err)}c.drawImage(pim,-dw/2,-dh/2,dw,dh);c.restore()}
+   if(im&&IW){if(o.shadow){c.fillStyle='rgba(0,0,0,.01)';c.fill()}c.shadowColor='transparent';c.save();c.clip();const ir=IW/IH,br=w/h;let dw,dh;if(o.fit==='stretch'){dw=w;dh=h}else if((o.fit==='contain')===(ir>br)){dw=w;dh=w/ir}else{dh=h;dw=h*ir}let pim=im;if(!live&&hasPE(o))try{pim=peRender(o,im)}catch(err){console.error(err)}c.drawImage(pim,-dw/2,-dh/2,dw,dh);c.restore()}
    else{c.fillStyle=o.fill;c.fill();c.shadowColor='transparent';c.save();c.clip();const m=Math.min(w,h)*.22;c.fillStyle='rgba(60,70,90,.22)';c.beginPath();c.moveTo(-m,m*.6);c.lineTo(-m*.25,-m*.35);c.lineTo(m*.2,m*.2);c.lineTo(m*.5,-m*.05);c.lineTo(m,m*.6);c.closePath();c.fill();c.beginPath();c.arc(m*.45,-m*.55,m*.18,0,7);c.fill();
     if(!exp&&m>14){c.fillStyle='rgba(40,48,64,.6)';c.font=`500 ${Math.max(10,Math.min(m*.32,28))}px "IBM Plex Sans",sans-serif`;c.textAlign='center';c.textBaseline='top';c.fillText(o.name==='Logo'?'Drop your logo':'Drop or double-click to add photo',0,m*.85)}c.restore()}
    if(o.strokeW>0){c.lineWidth=o.strokeW;c.strokeStyle=o.stroke;c.stroke()}break}
@@ -1785,10 +1785,11 @@ function snapMove(items,dx,dy,e){
 }
 function doResize(d,mx,my,shift,alt){
  const o=d.o,g=d.orig,[hx,hy]=d.hd.d,a=(g.rot||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),cx=g.x+g.w/2,cy=g.y+g.h/2;
- const dx=mx-cx,dy=my-cy,lx=dx*c+dy*s,ly=-dx*s+dy*c;const sym=alt||(shift&&!(hx&&hy));let ax=-hx*g.w/2,ay=-hy*g.h/2;
+ const dx=mx-cx,dy=my-cy,lx=dx*c+dy*s,ly=-dx*s+dy*c;const sym=alt;let ax=-hx*g.w/2,ay=-hy*g.h/2;
  let w=g.w,h=g.h;if(sym){if(hx)w=Math.max(4,2*lx*hx);if(hy)h=Math.max(4,2*ly*hy);if(hx&&hy&&!shift===(o.type==='image'||o.type==='text')){}ax=-hx*w/2;ay=-hy*h/2}else{if(hx)w=Math.max(4,(lx-ax)*hx);if(hy)h=Math.max(4,(ly-ay)*hy)}
  if(hx&&hy&&((o.type==='image'||o.type==='text')!==shift)){const k=Math.max(w/g.w,h/g.h);w=g.w*k;h=g.h*k;if(sym){ax=-hx*w/2;ay=-hy*h/2}}
  if(o.type==='text'){if(hx&&hy)o.size=Math.max(4,rnd(g.size*w/g.w));o.w=w;layout(o);const ncx=ax+hx*w/2,wx=cx+ncx*c;o.x=wx-w/2;o.y=hy===-1?g.y+g.h-o.h:g.y;return}
+ if(shift&&!(hx&&hy)&&o.type==='image'){if(!d.fit0)d.fit0=g.fit||'contain';o.fit='stretch'}
  const ncx=hx?ax+hx*w/2:0,ncy=hy?ay+hy*h/2:0,wx=cx+ncx*c-ncy*s,wy=cy+ncx*s+ncy*c;
  o.w=w;o.h=h;o.x=wx-w/2;o.y=wy-h/2;
  if(d.kids&&d.kids.length){const sx=w/g.w,sy=h/g.h;d.kids.forEach(({t,o:k})=>{t.size=Math.max(1,k.size*sy);t.ls=(k.ls||0)*sy;t.hs=tN(k.hs,100)*sx/sy;t.w=k.w*sx;t.x=o.x+(k.x-g.x)*sx;t.y=o.y+(k.y-g.y)*sy;if(t.runs)t.runs.forEach((r,i)=>{const kr=k.runs&&k.runs[i];if(kr&&kr.size)r.size=kr.size*sy});layout(t)})}
@@ -1803,7 +1804,7 @@ const RTOOLS=[
  ];
 let rtool='remove',rsize=60,rt=null,rtHover=null;
 const rtDef=()=>RTOOLS.find(t=>t[0]===rtool);
-function rtDrawn(o){const ir=rt.W/rt.H,br=o.w/o.h;let dw,dh;if((o.fit==='contain')===(ir>br)){dw=o.w;dh=o.w/ir}else{dh=o.h;dw=o.h*ir}return[dw,dh]}
+function rtDrawn(o){const ir=rt.W/rt.H,br=o.w/o.h;let dw,dh;if(o.fit==='stretch'){dw=o.w;dh=o.h}else if((o.fit==='contain')===(ir>br)){dw=o.w;dh=o.w/ir}else{dh=o.h;dw=o.h*ir}return[dw,dh]}
 function rtSession(){const o=sel.length===1&&getObj(sel[0]);if(!o||o.type!=='image'||!o.src)return null;const im=getImg(o.src);if(!im||!im.naturalWidth)return null;
  if(rt&&rt.o===o&&rt.key===o.src)return rt;
  const W=im.naturalWidth,H=im.naturalHeight,c=cnv(W,H),x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0);
@@ -1991,7 +1992,7 @@ function tipMask(def,px,hard){px=Math.max(1,Math.round(px));const c=cnv(px,px),x
  return c}
 function loadBrushImgs(){for(const b of myBrushes())if(!brushImgs[b.id]){const im=new Image();im.onload=()=>{brushImgs[b.id]=im;renderBrushUI()};im.src=b.tip}}
 let bp=null,bHover=null;
-function drawnSize(o,W,H){const ir=W/H,br=o.w/o.h;if((o.fit==='contain')===(ir>br))return[o.w,o.w/ir];return[o.h*ir,o.h]}
+function drawnSize(o,W,H){const ir=W/H,br=o.w/o.h;if(o.fit==='stretch')return[o.w,o.h];if((o.fit==='contain')===(ir>br))return[o.w,o.w/ir];return[o.h*ir,o.h]}
 function docToPx(o,W,H,x,y){const[dw,dh]=drawnSize(o,W,H),[lx,ly]=toLocal(o,x,y);return[(lx+dw/2)*W/dw,(ly+dh/2)*H/dh,W/dw]}
 function rasterLayer(o){layout&&o.type==='text'&&layout(o);const a=aabb(o),m=Math.ceil(Math.max(20,(o.strokeW||0)+(o.shadow||0)*2+40)),l=Math.floor(a.l-m),t=Math.floor(a.t-m),W=Math.ceil(a.r+m)-l,H=Math.ceil(a.b+m)-t,sc=Math.min(2,4000/Math.max(W,H));
  const c=cnv(Math.round(W*sc),Math.round(H*sc)),x=c.getContext('2d');x.setTransform(sc,0,0,sc,-l*sc,-t*sc);drawObj(x,{...o,id:'r'+o.id,visible:true,_editing:false},true,sc);
@@ -2206,7 +2207,7 @@ function applyCrop(){if(!crop)return;const o=cropObj(),r=crop.r,B=cropB();
  pushHist();
  if(!o){objs.forEach(ob=>{ob.x-=r.x;ob.y-=r.y});doc.w=Math.max(50,Math.round(r.w));doc.h=Math.max(50,Math.round(r.h));objs.forEach(ob=>{if(isBgLayer(ob)&&ob.locked){ob.x=0;ob.y=0;ob.w=doc.w;ob.h=doc.h}});syncDocUI();crop=null;$('#cropbar').hidden=true;setTool('move');fit();renderAll();toast('Artboard cropped');return}
  const im=o.src&&getImg(o.src);
- if(im&&im.naturalWidth){const ir=im.naturalWidth/im.naturalHeight,br=o.w/o.h;let dw,dh;if((o.fit==='contain')===(ir>br)){dw=o.w;dh=o.w/ir}else{dh=o.h;dw=o.h*ir}
+ if(im&&im.naturalWidth){const ir=im.naturalWidth/im.naturalHeight,br=o.w/o.h;let dw,dh;if(o.fit==='stretch'){dw=o.w;dh=o.h}else if((o.fit==='contain')===(ir>br)){dw=o.w;dh=o.w/ir}else{dh=o.h;dw=o.h*ir}
   let sc=im.naturalWidth/dw;if(Math.max(r.w,r.h)*sc>4000)sc=4000/Math.max(r.w,r.h);
   const c=document.createElement('canvas');c.width=Math.max(1,Math.round(r.w*sc));c.height=Math.max(1,Math.round(r.h*sc));const x=c.getContext('2d');x.scale(sc,sc);x.translate(-r.x,-r.y);x.drawImage(im,-dw/2,-dh/2,dw,dh);
   const key='img'+Date.now().toString(36)+'c';images[key]=c.toDataURL(o.src&&images[o.src]&&images[o.src].startsWith('data:image/jpeg')?'image/jpeg':'image/png',.92);o.src=key;o.fit='cover'}
