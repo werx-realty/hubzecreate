@@ -421,6 +421,8 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 #fontPanel.collapsed{flex:none;min-height:0}#fontPanel.collapsed>:not(#fpHd){display:none!important}#fontPanel.collapsed .fpCar{transform:rotate(-90deg)}
 #fontPanel.floating{position:fixed;z-index:60;width:290px;height:440px;background:var(--bg1);border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden}
 #fontPanel.floating.collapsed{height:auto}#right.dockHint{box-shadow:inset 0 0 0 2px var(--accent)}
+
+#layersSec{height:auto;min-height:0;max-height:46%;flex:0 1 auto}#layersSec #layers{flex:0 1 auto;min-height:0;max-height:none}
 </style>
 
 <div id="app">
@@ -517,7 +519,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
   <div id="rtbar" hidden><b id="rtName"></b><label id="rtSizeWrap" class="rtsz">Size <input type="range" id="rtSize" min="2" max="400" value="60"><input type="number" id="rtSizeN" min="2" max="1000" value="60"></label><span id="rtInfo"></span><button class="tb" id="rtDone">Done</button></div>
   <div id="rbbar" hidden><b>Remove Background</b><div class="btnRow"><button class="sb" id="rbAuto" title="AI finds the main subject">Auto (AI)</button><button class="sb" id="rbSolid" title="For white or plain backgrounds">Solid color</button></div><label class="rtsz" id="rbTolW">Tolerance <input type="range" id="rbTol" min="5" max="150" value="45"></label><label class="rtsz" id="rbCleanW" title="Higher removes faint leftovers like furniture">Clean up <input type="range" id="rbClean" min="0" max="90" value="60"></label><label class="rtsz" id="rbHolesW" title="Fills see-through spots inside the person">Fill spots <input type="range" id="rbHoles" min="0" max="30" value="8"></label><label class="rtsz" title="Left trims the outline to remove leftover halo, right grows it">Edge <input type="range" id="rbEdge" min="-8" max="8" value="0"></label><label class="rtsz">Soft edge <input type="range" id="rbSoft" min="0" max="12" value="1"></label><span class="sep"></span><div class="btnRow"><button class="sb" id="rbRestore" title="Paint back parts that got removed">Restore</button><button class="sb" id="rbErase" title="Paint away leftover background">Erase</button></div><label class="rtsz">Brush <input type="number" id="rbSize" min="2" max="600" value="40"></label><span id="rbInfo"></span><button class="tb" id="rbCancel">Cancel</button><button class="tb primary" id="rbApply">Apply</button></div>
   <div id="cropbar" hidden><span id="cropInfo"></span><button class="tb" id="cropCancel">Cancel</button><button class="tb primary" id="cropApply">Apply crop</button></div>
-  <div id="floatbar" hidden><button data-fb="fit" title="Fit the whole picture inside the box">Fit</button><button data-fb="fill" title="Fill the box (crops edges)">Fill</button><button data-fb="replace">Replace</button><button data-fb="merge" title="Put this picture inside the layer under it (Ctrl+E). Click again to take it out.">Merge</button></div>
+  <div id="floatbar" hidden><button data-fb="fit" title="Fit the whole picture inside the box">Fit</button><button data-fb="fill" title="Fill the box (crops edges)">Fill</button><button data-fb="replace">Replace</button><button data-fb="merge" title="Put this picture inside the layer under it (Ctrl+E). Click again to take it out.">Merge</button><button data-fb="unmerge" title="Split this merged layer back into the original layers" hidden>Unmerge</button></div>
   <div class="hint" id="hint">Drag photos onto a photo box to drop them in · Space+drag to pan · Ctrl+scroll to zoom</div>
  </main>
 
@@ -560,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-J</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-L</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -1394,10 +1396,10 @@ function putAbove(o,ref){if(ref&&objs.includes(ref)){if(ref.gid)o.gid=ref.gid;ob
 function dropPicture(key,w,h,p){
  const top=p?hitTop(p[0],p[1],o=>!isBgLayer(o)):null,hit=p?hitTop(p[0],p[1],o=>!isBgLayer(o)&&o.type!=='text'):null;
  if(hit&&hit.type==='image'&&!hit.src){pushHist();hit.src=key;sel=[hit.id];renderAll();toast('Photo added. Use Fit to show the whole picture.');return}
- const box=top&&top.type==='text'&&!top.locked?top:hit&&['rect','ellipse','triangle','star','diamond'].includes(hit.type)&&!hit.locked&&(hit.w*hit.h)<doc.w*doc.h*.9?hit:null;
+ const box=window.__autoBox&&top&&top.type==='text'&&!top.locked?top:window.__autoBox&&hit&&['rect','ellipse','triangle','star','diamond'].includes(hit.type)&&!hit.locked&&(hit.w*hit.h)<doc.w*doc.h*.9?hit:null;
  if(box){let bw=box.w,bx=box.x;if(box.type==='text'){layout(box);const lw=Math.max(...(box._L||[]).map(l=>l.w))*(tN(box.hs,100)/100||1);if(lw>bw){if(box.align==='center')bx-=(lw-bw)/2;else if(box.align==='right')bx-=lw-bw;bw=lw}}const k=Math.max(bw/w,box.h/h),W=w*k*1.02,H=h*k*1.02,o=I(bx+bw/2-W/2,box.y+box.h/2-H/2,W,H,{src:key,fit:'cover',clip:true,name:'Photo in '+box.name});if(box.gid)o.gid=box.gid;
   pushHist();let at=objs.indexOf(box)+1;while(objs[at]&&objs[at].clip)at++;objs.splice(at,0,o);sel=[o.id];renderAll();toast(`Picture is inside “${box.name}”. Drag it to move it around inside. Ctrl+E takes it out.`);return}
- placeImage(key,w,h,p,top);if(top)toast('Placed on top as a new layer');
+ placeImage(key,w,h,p,top);if(top)toast('Placed where you dropped it. Hit Merge to put it inside the box under it.');
 }
 async function addFiles(files,at){
  for(const f of files){const r=await ingest(f);if(!r)continue;dropPicture(r.key,r.w,r.h,at);at=at&&[at[0]+20,at[1]+20]}
@@ -1752,7 +1754,7 @@ cv.addEventListener('pointermove',e=>{
  if(d.mode==='rbg'){rbHover=[x,y];rbPaint(x,y);return}
  if(d.mode==='create'){const o=d.o;let w=Math.abs(x-d.sx),h=Math.abs(y-d.sy);if(e.shiftKey)w=h=Math.max(w,h);o.x=x<d.sx?d.sx-w:d.sx;o.y=y<d.sy?d.sy-h:d.sy;o.w=Math.max(1,w);o.h=Math.max(1,h)}
  else if(d.mode==='move'){let dx=x-d.sx,dy=y-d.sy;if(e.shiftKey){Math.abs(dx)>Math.abs(dy)?dy=0:dx=0}if(!d.done&&(dx||dy)){pushHist();d.done=true}[dx,dy]=snapMove(d.items,dx,dy,e);d.items.forEach(it=>{it.o.x=it.x+dx;it.o.y=it.y+dy})}
- else if(d.mode==='resize'){if(!d.done){pushHist();d.done=true}if(d.o)d.o.autoW=false;doResize(d,x,y,e.shiftKey)}
+ else if(d.mode==='resize'){if(!d.done){pushHist();d.done=true}if(d.o)d.o.autoW=false;doResize(d,x,y,e.shiftKey,e.altKey)}
  else if(d.mode==='rotate'){if(!d.done){pushHist();d.done=true}const o=d.o;let a=d.a0!=null?d.r0+Math.atan2(y-(o.y+o.h/2),x-(o.x+o.w/2))*180/Math.PI-d.a0:Math.atan2(y-(o.y+o.h/2),x-(o.x+o.w/2))*180/Math.PI+90;if(e.shiftKey)a=Math.round(a/15)*15;a=((a+180)%360+360)%360-180;o.rot=Math.round(a*10)/10}
  else if(d.mode==='marquee'){d.x=x;d.y=y}
  else if(d.mode.startsWith('crop')){cropMove(d,x,y,e.shiftKey);draw();return}
@@ -1781,11 +1783,11 @@ function snapMove(items,dx,dy,e){
  const best=(as,bs)=>{let r={d:0,v:null,dist:th};for(const a of as)for(const b of bs){const d=b-a;if(Math.abs(d)<r.dist)r={d,v:b,dist:Math.abs(d)}}return r};
  const bx=best(xs,tx),by=best(ys,ty);if(bx.v!=null){dx+=bx.d;guides.push({x:bx.v})}if(by.v!=null){dy+=by.d;guides.push({y:by.v})}return[dx,dy];
 }
-function doResize(d,mx,my,shift){
+function doResize(d,mx,my,shift,alt){
  const o=d.o,g=d.orig,[hx,hy]=d.hd.d,a=(g.rot||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),cx=g.x+g.w/2,cy=g.y+g.h/2;
- const dx=mx-cx,dy=my-cy,lx=dx*c+dy*s,ly=-dx*s+dy*c,ax=-hx*g.w/2,ay=-hy*g.h/2;
- let w=g.w,h=g.h;if(hx)w=Math.max(4,(lx-ax)*hx);if(hy)h=Math.max(4,(ly-ay)*hy);
- if(hx&&hy&&((o.type==='image'||o.type==='text')!==shift)){const k=Math.max(w/g.w,h/g.h);w=g.w*k;h=g.h*k}
+ const dx=mx-cx,dy=my-cy,lx=dx*c+dy*s,ly=-dx*s+dy*c;const sym=alt||(shift&&!(hx&&hy));let ax=-hx*g.w/2,ay=-hy*g.h/2;
+ let w=g.w,h=g.h;if(sym){if(hx)w=Math.max(4,2*lx*hx);if(hy)h=Math.max(4,2*ly*hy);if(hx&&hy&&!shift===(o.type==='image'||o.type==='text')){}ax=-hx*w/2;ay=-hy*h/2}else{if(hx)w=Math.max(4,(lx-ax)*hx);if(hy)h=Math.max(4,(ly-ay)*hy)}
+ if(hx&&hy&&((o.type==='image'||o.type==='text')!==shift)){const k=Math.max(w/g.w,h/g.h);w=g.w*k;h=g.h*k;if(sym){ax=-hx*w/2;ay=-hy*h/2}}
  if(o.type==='text'){if(hx&&hy)o.size=Math.max(4,rnd(g.size*w/g.w));o.w=w;layout(o);const ncx=ax+hx*w/2,wx=cx+ncx*c;o.x=wx-w/2;o.y=hy===-1?g.y+g.h-o.h:g.y;return}
  const ncx=hx?ax+hx*w/2:0,ncy=hy?ay+hy*h/2:0,wx=cx+ncx*c-ncy*s,wy=cy+ncx*s+ncy*c;
  o.w=w;o.h=h;o.x=wx-w/2;o.y=wy-h/2;
@@ -2233,8 +2235,9 @@ function endEdit(){if(!editing)return;editing._editing=false;editing=null;editSe
 
 /* ---------- float bar (image tools) ---------- */
 const fb=$('#floatbar');
-function placeFloat(){const o=sel.length===1&&getObj(sel[0]);if(crop||tool==='retouch'||tool==='rbg'||(o&&o.bp)||!o||isBgLayer(o)||drag||bp||!o.visible||editing){fb.hidden=true;return}const isImg=o.type==='image';fb.querySelectorAll('[data-fb=fit],[data-fb=fill],[data-fb=replace]').forEach(b=>b.hidden=!isImg);const a=aabb(o);fb.hidden=false;fb.style.left=(view.px+(a.l+a.r)/2*view.z)+'px';fb.style.top=Math.max(44,view.py+a.t*view.z-10)+'px';fb.querySelector('[data-fb=fit]').classList.toggle('on',isImg&&o.fit==='contain');fb.querySelector('[data-fb=fill]').classList.toggle('on',o.fit==='cover');fb.querySelector('[data-fb=merge]').classList.toggle('on',!!o.clip)}
-fb.addEventListener('click',e=>{const b=e.target.closest('[data-fb]');if(!b)return;imgAct(b.dataset.fb)});
+function unmergeLayer(o){if(!o||!o.unmerge)return false;pushHist();const i=objs.indexOf(o),back=o.unmerge;objs.splice(i,1,...back);sel=back.map(q=>q.id);renderAll();toast('Unmerged: your layers are back');return true}
+function placeFloat(){const o=sel.length===1&&getObj(sel[0]);if(crop||tool==='retouch'||tool==='rbg'||(o&&o.bp)||!o||isBgLayer(o)||drag||bp||!o.visible||editing){fb.hidden=true;return}const isImg=o.type==='image';fb.querySelectorAll('[data-fb=fit],[data-fb=fill],[data-fb=replace]').forEach(b=>b.hidden=!isImg);const a=aabb(o);fb.hidden=false;fb.style.left=(view.px+(a.l+a.r)/2*view.z)+'px';fb.style.top=Math.max(44,view.py+a.t*view.z-10)+'px';fb.querySelector('[data-fb=fit]').classList.toggle('on',isImg&&o.fit==='contain');fb.querySelector('[data-fb=fill]').classList.toggle('on',o.fit==='cover');fb.querySelector('[data-fb=merge]').classList.toggle('on',!!o.clip);fb.querySelector('[data-fb=merge]').textContent=o.clip?'Unmerge':'Merge';fb.querySelector('[data-fb=unmerge]').hidden=!o.unmerge}
+fb.addEventListener('click',e=>{const b=e.target.closest('[data-fb]');if(!b)return;if(b.dataset.fb==='unmerge'){unmergeLayer(getObj(sel[0]));return}imgAct(b.dataset.fb)});
 function mergeInto(o){if(o.clip){pushHist();o.clip=false;renderAll();toast('Taken out. It is its own layer again.');return}
  const cx=o.x+o.w/2,cy=o.y+o.h/2,A=aabb(o),aO=(A.r-A.l)*(A.b-A.t),base=b=>b&&b.clip?clipBase(b):b;
  /* look at every layer under the middle of this one, no matter where it sits in Layers */
@@ -2269,7 +2272,7 @@ function mergeSel(){
  if(r<0){toast('Nothing visible to merge');return}
  const cw=r-l+1,ch=b-t+1,out=document.createElement('canvas');out.width=cw;out.height=ch;out.getContext('2d').drawImage(c,l,t,cw,ch,0,0,cw,ch);
  const key='img'+Date.now().toString(36)+'m';images[key]=out.toDataURL('image/png');
- const no=I(bb.l-m+l/sc,bb.t-m+t/sc,cw/sc,ch/sc,{src:key,fit:'contain',name:'Merged layer',fill:'#d5dae3'});
+ const no=I(bb.l-m+l/sc,bb.t-m+t/sc,cw/sc,ch/sc,{src:key,fit:'contain',name:'Merged layer',fill:'#d5dae3'});no.unmerge=JSON.parse(JSON.stringify(objs.filter(o=>ids.has(o.id)&&o.visible)));
  pushHist();const top=Math.max(...os.map(o=>objs.indexOf(o)));objs.splice(top+1,0,no);objs=objs.filter(o=>!ids.has(o.id)||!o.visible);sel=[no.id];renderAll();toast(`Merged ${os.length} layers into one`)}
 function order(kind){if(!sel.length)return;pushHist();const set=new Set(sel);const inS=objs.filter(o=>set.has(o.id)),out=objs.filter(o=>!set.has(o.id));
  if(kind==='front')objs=[...out,...inS];else if(kind==='back'){const bgs=out.filter(o=>o.name==='Background'&&o.locked);objs=[...bgs,...inS,...out.filter(o=>!bgs.includes(o))]}
