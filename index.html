@@ -562,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-N</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-O</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -3001,7 +3001,7 @@ function drawList(c,list,exp,k,map=o=>o,skip=()=>false){const KN=new Map(),ids=n
    holes.forEach(t=>{if(t.visible)drawObj(ox,{...map(t),opacity:1,fx:null,shadow:0,fill:'#000'},exp,k)});c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(off,0,0);c.restore()}else drawObj(c,map(o),exp,k)}const kids=[];for(let j=i+1;j<list.length&&list[j].clip;j++)kids.push(list[j]);if(!kids.length||!o.visible)continue;
  /* draw the inside layers, then keep only what falls on the base layer's real pixels (letters, shapes, cutouts) */
  const cv0=c.canvas,tf=c.getTransform(),A=cnv(cv0.width,cv0.height),ax=A.getContext('2d');ax.setTransform(tf);kids.forEach(q=>drawObj(ax,map(q),exp,k));
- const M=cnv(cv0.width,cv0.height),mx=M.getContext('2d');mx.setTransform(tf);drawObj(mx,{...map(o),opacity:1,shadow:0,visible:true},exp,k);
+ const M=cnv(cv0.width,cv0.height),mx=M.getContext('2d');mx.setTransform(tf);drawObj(mx,{...map(o),opacity:1,shadow:0,visible:true,fx:null,stroke:null,strokeW:0},exp,k);
  ax.setTransform(1,0,0,1,0,0);ax.globalCompositeOperation='destination-in';ax.drawImage(M,0,0);c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.drawImage(A,0,0);c.restore()}}
 const clipBase=o=>{let i=objs.indexOf(o)-1;while(i>=0&&objs[i].clip)i--;return i>=0?objs[i]:null};
 function toggleClip(){if(sel.length>1){const os=sel.map(getObj).filter(Boolean).sort((a,b)=>objs.indexOf(a)-objs.indexOf(b)),base=os[0],kids=os.slice(1);
