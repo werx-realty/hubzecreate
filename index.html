@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>HUBZE Studio</title><meta http-equiv="Cache-Control" content="no-cache">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -400,6 +399,9 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 .exfoot .tb{height:36px;padding:0 18px;border-radius:8px}
 @media(max-width:700px){.exgrid{grid-template-columns:1fr}.exprev{min-height:200px}}
 
+
+#warpModal .wpdir input[type=radio]{all:revert;appearance:auto;-webkit-appearance:radio;width:14px;height:14px;margin:0 6px 0 0;position:static;accent-color:var(--accent);flex:none}
+#warpModal .wpdir label{display:inline-flex;align-items:center;position:relative}
 </style>
 
 <div id="app">
@@ -538,7 +540,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-B</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-C</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -3521,5 +3523,3 @@ Promise.all(fontJobs).then(()=>{draw();renderTemplates();renderSections()});
 document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',()=>draw());
 })();
 </script>
-
-</body></html>
