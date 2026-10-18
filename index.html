@@ -562,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-O</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-P</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -1656,7 +1656,7 @@ function strokeShape(c,o,lw,col,fill){const x=-o.w/2,y=-o.h/2,w=o.w,h=o.h;c.line
  if(fill)c.fill();if(lw>0)c.stroke();return true}
 function drawShape(c,o,exp){
  const x=-o.w/2,y=-o.h/2,w=o.w,h=o.h;
- if(o.shadow){c.shadowColor='rgba(0,0,0,.28)';c.shadowBlur=o.shadow;c.shadowOffsetY=o.shadow/3}
+ if(o.shadow){c.shadowColor='rgba(0,0,0,.28)';const _m=c.getTransform(),_k=Math.hypot(_m.a,_m.b)||1;c.shadowBlur=(o.shSoft!=null?o.shSoft:o.shadow)*_k;c.shadowOffsetY=o.shadow/3*_k;c.shadowOffsetX=0}
  switch(o.type){
   case 'rect':rr(c,x,y,w,h,o.radius);paint(c,o);break;
   case 'ellipse':c.beginPath();c.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);paint(c,o);break;
@@ -2480,7 +2480,7 @@ function renderProps(){
  if(!['text','image'].includes(o.type)||!single){
   if(single||os.every(x=>x.type!=='image'))h+=grp('Fill',`${col('fill','Fill',o.fill)}<div class="row" style="margin-top:6px"><label class="chk"><input type="checkbox" data-k="noFill" ${o.noFill?'checked':''}> No fill</label></div>${o.type==='rect'&&single?rng('radius','Corners',o.radius,0,Math.round(Math.min(o.w,o.h)/2)):''}`)}
  if(o.type!=='text')h+=grp('Border',`${col('stroke','Color',o.stroke)}<div style="height:6px"></div>${rng('strokeW','Width',o.strokeW,0,40)}`);
- h+=grp('Effects',`${rng('opacity','Opacity',o.opacity,0,100,.01)}${rng('shadow','Shadow',o.shadow,0,80)}<button class="sb big" style="width:100%;margin-top:4px" data-act="fx"><i style="font-family:Georgia,serif;font-weight:700">fx</i>&nbsp; Layer effects${hasFx(o)?' (on)':''}…</button>`);
+ h+=grp('Effects',`${rng('opacity','Opacity',o.opacity,0,100,.01)}${rng('shadow','Shadow',o.shadow,0,80)}${rng('shSoft','Shadow softness (0 = hard)',o.shSoft!=null?o.shSoft:(o.shadow||0),0,80)}<button class="sb big" style="width:100%;margin-top:4px" data-act="fx"><i style="font-family:Georgia,serif;font-weight:700">fx</i>&nbsp; Layer effects${hasFx(o)?' (on)':''}…</button>`);
  h+=grp('Link',`<label class="f"><span>🔗</span><input data-k="link" value="${esc(o.link||'')}" placeholder="https://yoursite.com, email or phone"></label><small style="display:block;color:var(--muted);margin-top:6px;line-height:1.4">${o.link?`Opens <a href="${esc(normUrl(o.link))}" target="_blank" rel="noopener" style="color:var(--accent2)">${esc(normUrl(o.link))}</a>. `:''}Works when you export as PDF or Email HTML.</small>`);
  h+=grp('Arrange',`<div class="btnRow"><button class="sb" data-act="ord:front">To front</button><button class="sb" data-act="ord:up">Forward</button><button class="sb" data-act="ord:down">Backward</button><button class="sb" data-act="ord:back">To back</button></div><div class="btnRow" style="margin-top:6px">${single?'':'<button class="sb on" data-act="merge">Merge layers</button><button class="sb" data-act="group">Group</button>'}${os.some(x=>x.gid)?'<button class="sb" data-act="ungroup">Ungroup</button><button class="sb" data-act="secUp" title="Swap with the section above">Section ↑</button><button class="sb" data-act="secDown" title="Swap with the section below">Section ↓</button>':''}${os.some(x=>x.type==='text'||burnKids(x).length)?`<button class="sb${os.some(x=>burnKids(x).length)||os.filter(x=>x.type==='text').every(x=>x.knock)?' on':''}" data-act="burn" title="Cut the text out of the box under it">Burn text</button>`:''}<button class="sb${os.every(x=>x.clip)?' on':''}" data-act="clip" title="Ctrl+E">${os.every(x=>x.clip)?'↳ Take out of box':single?'Put inside box below':'Put inside bottom box'}</button><button class="sb" data-act="dup">Duplicate</button><button class="sb" data-act="lock">${single&&o.locked?'Unlock':'Lock'}</button><button class="sb danger" data-act="del">Delete</button></div>`);
  P.innerHTML=h;
@@ -2592,7 +2592,7 @@ $('#saveMenu').onclick=e=>{const b=e.target.closest('[data-sv]');if(!b)return;$(
 
 /* ---------- layer style dialog ---------- */
 let fxCur='dropShadow';
-const FXF={spread:['Spread','%',0,100],noise:['Noise','%',0,100],size:['Size','px',0,100],distance:['Distance','px',0,100],depth:['Depth','px',0,50],angle:['Angle','°',0,360],scale:['Scale','px',2,100],opacity:['Opacity','%'],hiOp:['Highlight opacity','%'],shOp:['Shadow opacity','%'],color:['Color'],c1:['Start color'],c2:['End color'],highlight:['Highlight color'],shadow:['Shadow color'],pos:['Position',['outside','inside','center']],pattern:['Pattern',['stripes','dots','grid','checker']]};
+const FXF={spread:['Spread','%',0,100],noise:['Noise','%',0,100],size:['Softness','px',0,100],distance:['Distance','px',0,100],depth:['Depth','px',0,50],angle:['Angle','°',0,360],scale:['Scale','px',2,100],opacity:['Opacity','%'],hiOp:['Highlight opacity','%'],shOp:['Shadow opacity','%'],color:['Color'],c1:['Start color'],c2:['End color'],highlight:['Highlight color'],shadow:['Shadow color'],pos:['Position',['outside','inside','center']],pattern:['Pattern',['stripes','dots','grid','checker']]};
 const fxObjs=()=>sel.map(getObj).filter(Boolean);
 function openFx(name){const os=fxObjs();if(!os.length){toast('Select a layer first');return}if(editing)endEdit();pushHist();
  os.forEach(o=>o.fx=JSON.parse(JSON.stringify(o.fx||{})));
