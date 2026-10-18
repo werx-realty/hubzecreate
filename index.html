@@ -402,6 +402,17 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
 #warpModal .wpdir input[type=radio]{all:revert;appearance:auto;-webkit-appearance:radio;width:14px;height:14px;margin:0 6px 0 0;position:static;accent-color:var(--accent);flex:none}
 #warpModal .wpdir label{display:inline-flex;align-items:center;position:relative}
+
+#fontPanel{display:flex;flex-direction:column;flex:0 0 42%;min-height:180px;border-bottom:1px solid var(--line)}#fontPanel[hidden]{display:none}
+#fpSearch,#fontPop .fpS{margin:0 12px 8px;height:32px;border:1px solid var(--line);border-radius:7px;background:var(--bg2);color:inherit;padding:0 10px;font:inherit}
+#fpList,#fontPop .fpL{overflow:auto;min-height:0;flex:1;padding:0 6px 8px}
+.fpI{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;font-size:19px;line-height:1.25;padding:7px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;content-visibility:auto;contain-intrinsic-size:auto 36px}
+.fpI:hover{background:var(--bg3)}.fpI.on{background:var(--accent);color:#fff}
+.fpSep{font:600 10px/1 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:12px 10px 6px}
+#fontPop{position:fixed;z-index:95;background:var(--bg1);border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;padding-top:8px}#fontPop[hidden]{display:none}
+#fontPop .fpS{margin:0 8px 6px}
+
+#layers li{min-height:28px;padding:3px 10px;gap:6px;font-size:12.5px}#layers li .lt{width:26px;height:20px;font-size:10px}#layers li .lt svg{width:14px;height:14px}#layers li.fxl{min-height:20px}#layers li button,#layers li .eye,#layers li .lock{height:22px}
 </style>
 
 <div id="app">
@@ -516,6 +527,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
     <label class="chk"><input type="checkbox" id="scaleContent" checked> Scale content when resizing</label>
    </div>
   </div>
+  <div id="fontPanel" hidden><div class="sechd">Fonts <small>click to use</small></div><input id="fpSearch" placeholder="Search fonts" spellcheck="false" autocomplete="off"><div id="fpList"></div></div>
   <div id="propsWrap"><div id="props"></div></div>
   <div id="layersSec">
    <div class="sechd">Layers <small id="layerCount"></small></div>
@@ -540,7 +552,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-F</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-H</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -654,6 +666,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
  </div>
 </div></div>
 <div class="lmenu topmenu" id="themeMenu" hidden><b>Color Theme</b><div class="thRow"><button class="thSw" data-th="dark" style="background:#2b2b2b" title="Black"></button><button class="thSw" data-th="mid" style="background:#3c3d42" title="Dark gray"></button><button class="thSw" data-th="light" style="background:#b8b9bc" title="Light gray"></button><button class="thSw" data-th="white" style="background:#f2f2f2" title="White"></button></div><b>Work Area</b><div class="thRow"><button class="thSw wkSw" data-wk="dark" style="background:#2b2b2b" title="Black"></button><button class="thSw wkSw" data-wk="mid" style="background:#3c3d42" title="Dark gray"></button><button class="thSw wkSw" data-wk="light" style="background:#b8b9bc" title="Light gray"></button><button class="thSw wkSw" data-wk="white" style="background:#f2f2f2" title="White"></button></div></div>
+<div id="fontPop" hidden></div>
 <div id="toast" hidden></div>
 
 <script>
@@ -2410,7 +2423,24 @@ $('#cpSzDrop').onclick=e=>{e.stopPropagation();sm.hidden?openSizeMenu($('#cpSize
 $('#toPanel').onclick=()=>{const m=$('#charModal');m.hidden=!m.hidden;syncCharPanel()};$('#cpClose').onclick=()=>$('#charModal').hidden=true;
 $('#toCancel').onclick=()=>{if(editing){const o=editing;endEdit();undo();toast('Edit canceled')}};$('#toCommit').onclick=()=>{if(editing)endEdit()};
 
-function setTool(t){if(t!=='rbg'&&rb)rbCancel(true);if(t!=='crop'&&crop)cancelCrop();if(t!=='retouch'){$('#rtbar').hidden=true;rt=null;rtHover=null}$('#brushOpts').hidden=t!=='brush'&&t!=='eraser';$('#app').classList.toggle('eraserOn',t==='eraser');if(t!=='text'&&editing)endEdit();tool=t;try{syncTextBar()}catch{};if(t!=='brush'&&t!=='eraser'){bHover=null;$('#brushPanel').hidden=true}else{renderBrushUI();if(editing)endEdit()}tool=t;if(t==='retouch'){if(editing)endEdit();$('#rtbar').hidden=false;rtInfoUpd()}if(t==='crop')initCrop();$$('.tool[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));cv.style.cursor=''}
+/* ---------- font previews: right panel list + in-font dropdown ---------- */
+const fpEsc=f=>f.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+function fontListHTML(cur,q){q=(q||'').toLowerCase();let sep=false;return FONTS.filter(f=>!q||f.toLowerCase().includes(q)).map(f=>{let pre='';if(!sep&&MAC_FONTS.includes(f)){sep=true;pre='<div class="fpSep">Fonts on this Mac</div>'}return pre+`<button class="fpI${f===cur?' on':''}" data-font="${fpEsc(f)}" style="font-family:'${fpEsc(f).replace(/'/g,"\\'")}',sans-serif" title="${fpEsc(f)}">${fpEsc(f)}</button>`}).join('')||'<div class="fpSep">No fonts match</div>'}
+function curFont(){const t=selTexts()[0];if(editing&&editSel&&editSel.e>editSel.s){const st=styleAt(editing,editSel.s);if(st&&st.font)return st.font}return(t||tOpts).font}
+function renderFontPanel(){const p=$('#fontPanel');if(!p)return;const show=tool==='text'||!!editing;p.hidden=!show;if(!show)return;const cur=curFont();if(p._cur===cur&&p._q===$('#fpSearch').value&&p._n===FONTS.length)return;p._cur=cur;p._q=$('#fpSearch').value;p._n=FONTS.length;$('#fpList').innerHTML=fontListHTML(cur,p._q);const on=$('#fpList .on');if(on&&!p._scrolled){on.scrollIntoView({block:'center'});p._scrolled=true}}
+$('#fpSearch').addEventListener('input',()=>{$('#fontPanel')._cur=null;renderFontPanel()});
+$('#fontPanel').addEventListener('mousedown',e=>{if(e.target.closest('.fpI'))e.preventDefault()});
+$('#fpList').addEventListener('click',e=>{const b=e.target.closest('.fpI');if(!b)return;setText('font',b.dataset.font);$('#fontPanel')._cur=null;renderFontPanel()});
+keepEditIn.push('#fontPanel','#fontPop');
+const fpop=$('#fontPop');let fpopSel=null;
+function openFontPop(sel){fpopSel=sel;const r=sel.getBoundingClientRect();fpop.innerHTML=`<input class="fpS" placeholder="Search fonts" spellcheck="false"><div class="fpL">${fontListHTML(sel.value)}</div>`;
+ const w=Math.max(260,r.width);fpop.style.width=w+'px';fpop.style.left=Math.min(r.left,innerWidth-w-8)+'px';fpop.style.top=(r.bottom+4)+'px';fpop.style.maxHeight=Math.max(200,innerHeight-r.bottom-20)+'px';fpop.hidden=false;
+ const on=fpop.querySelector('.on');if(on)on.scrollIntoView({block:'center'});const s=fpop.querySelector('.fpS');s.oninput=()=>{fpop.querySelector('.fpL').innerHTML=fontListHTML(sel.value,s.value)};if(!editing)s.focus()}
+fpop.addEventListener('mousedown',e=>{if(!e.target.closest('.fpS'))e.preventDefault()});
+fpop.addEventListener('click',e=>{const b=e.target.closest('.fpI');if(!b||!fpopSel)return;fpopSel.value=b.dataset.font;fpopSel.dispatchEvent(new Event('change',{bubbles:true}));fpop.hidden=true;$('#fontPanel')._cur=null;renderFontPanel()});
+document.addEventListener('mousedown',e=>{const s=e.target.closest&&e.target.closest('#toFont,#cpFont,select[data-k="font"]');if(s){e.preventDefault();e.stopPropagation();if(!fpop.hidden&&fpopSel===s){fpop.hidden=true;return}openFontPop(s);return}if(!e.target.closest('#fontPop'))fpop.hidden=true},true);
+addEventListener('keydown',e=>{if(e.key==='Escape')fpop.hidden=true});
+function setTool(t){if(t!=='rbg'&&rb)rbCancel(true);if(t!=='crop'&&crop)cancelCrop();if(t!=='retouch'){$('#rtbar').hidden=true;rt=null;rtHover=null}$('#brushOpts').hidden=t!=='brush'&&t!=='eraser';$('#app').classList.toggle('eraserOn',t==='eraser');if(t!=='text'&&editing)endEdit();tool=t;try{syncTextBar()}catch{};try{$('#fontPanel')._scrolled=false;renderFontPanel()}catch{};if(t!=='brush'&&t!=='eraser'){bHover=null;$('#brushPanel').hidden=true}else{renderBrushUI();if(editing)endEdit()}tool=t;if(t==='retouch'){if(editing)endEdit();$('#rtbar').hidden=false;rtInfoUpd()}if(t==='crop')initCrop();$$('.tool[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));cv.style.cursor=''}
 $$('.tool[data-tool]').forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
 
 /* ---------- props panel ---------- */
@@ -2791,7 +2821,7 @@ function fixUid(){objs.forEach(o=>{const n=parseInt(String(o.id).slice(1));if(n>
 
 /* ---------- misc ---------- */
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2400)}
-function renderAll(){draw();if(typeof syncTextBar==='function')try{syncTextBar()}catch{}if(!deferLayers)renderLayers();renderTabs();renderProps();liveProps();if(!sel.length)$('#stSel').textContent='';else if(sel.length>1)$('#stSel').textContent=sel.length+' selected';scheduleSave()}
+function renderAll(){draw();if(typeof syncTextBar==='function')try{syncTextBar()}catch{}try{renderFontPanel()}catch{}if(!deferLayers)renderLayers();renderTabs();renderProps();liveProps();if(!sel.length)$('#stSel').textContent='';else if(sel.length>1)$('#stSel').textContent=sel.length+' selected';scheduleSave()}
 const closeDrawers=()=>{if(innerWidth<=900){$('#lib').classList.remove('open');$('#right').classList.remove('open')}};
 $('#libToggle').onclick=()=>{$('#right').classList.remove('open');$('#lib').classList.toggle('open')};
 $('#rightToggle').onclick=()=>{$('#lib').classList.remove('open');$('#right').classList.toggle('open')};
