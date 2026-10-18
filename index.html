@@ -413,6 +413,10 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 #fontPop .fpS{margin:0 8px 6px}
 
 #layers li{min-height:28px;padding:3px 10px;gap:6px;font-size:12.5px}#layers li .lt{width:26px;height:20px;font-size:10px}#layers li .lt svg{width:14px;height:14px}#layers li.fxl{min-height:20px}#layers li button,#layers li .eye,#layers li .lock{height:22px}
+
+.fpUp{margin-left:auto;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:4px 10px;font:600 11px system-ui,sans-serif;cursor:pointer}.fpUp:hover{filter:brightness(1.1)}#fontPanel .sechd{display:flex;align-items:center}
+
+#fpDrop{margin:0 12px 8px;border:1.5px dashed var(--line);border-radius:8px;padding:10px;text-align:center;color:var(--muted);font-size:12px;cursor:pointer;line-height:1.4}#fpDrop small{display:block;font-size:10px;opacity:.7}#fpDrop:hover,#fpDrop.over,#fontPanel.over #fpDrop{border-color:var(--accent);color:var(--fg);background:rgba(47,123,255,.08)}
 </style>
 
 <div id="app">
@@ -527,7 +531,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
     <label class="chk"><input type="checkbox" id="scaleContent" checked> Scale content when resizing</label>
    </div>
   </div>
-  <div id="fontPanel" hidden><div class="sechd">Fonts <small>click to use</small></div><input id="fpSearch" placeholder="Search fonts" spellcheck="false" autocomplete="off"><div id="fpList"></div></div>
+  <div id="fontPanel" hidden><div class="sechd">Fonts <button class="fpUp" id="fpUpload" title="Add a font file (.ttf .otf .woff)">+ Upload font</button></div><input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2" multiple hidden><div id="fpDrop">Drag font files here or <u>click to upload</u><small>.ttf · .otf · .woff</small></div><input id="fpSearch" placeholder="Search fonts" spellcheck="false" autocomplete="off"><div id="fpList"></div></div>
   <div id="propsWrap"><div id="props"></div></div>
   <div id="layersSec">
    <div class="sechd">Layers <small id="layerCount"></small></div>
@@ -552,7 +556,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-H</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-I</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -2811,6 +2815,19 @@ $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m||e.target
 function safeSet(k,v){try{localStorage.setItem(k,v);return true}catch{}try{const d=JSON.parse(localStorage.getItem('afs:doc')||'null');if(d){d.uploads=[];localStorage.setItem('afs:doc',JSON.stringify(d))}localStorage.setItem(k,v);return true}catch{}try{localStorage.removeItem('afs:doc');localStorage.setItem(k,v);scheduleSave();return true}catch{return false}}
 const IDB=(()=>{let p;const db=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('hubze-studio',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
  return{put:(k,v)=>db().then(d=>new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})),get:k=>db().then(d=>new Promise((res,rej)=>{const r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}})();
+/* ---------- upload your own fonts (saved in this app) ---------- */
+let upFonts=[];
+async function addFontData(name,buf){try{const ff=new FontFace(name,buf);await ff.load();document.fonts.add(ff);if(!FONTS.includes(name))FONTS.splice(0,0,name);if(!MAC_FONTS.includes(name)){}return true}catch(e){toast('Could not read font: '+name);return false}}
+async function uploadFonts(files){let n=0;for(const f of files){if(!/\.(ttf|otf|woff2?)$/i.test(f.name))continue;const name=f.name.replace(/\.(ttf|otf|woff2?)$/i,'').replace(/[-_]+/g,' ').trim();const buf=await f.arrayBuffer();if(await addFontData(name,buf.slice(0))){upFonts=upFonts.filter(x=>x.name!==name);upFonts.push({name,buf});n++}}
+ if(n){try{await IDB.put('fonts',upFonts)}catch{}try{refreshFonts()}catch{}$('#fontPanel')._cur=null;renderFontPanel();renderAll();toast(n+' font'+(n>1?'s':'')+' added')}else toast('Pick .ttf, .otf, .woff or .woff2 files')}
+$('#fpUpload').onclick=()=>$('#fontFile').click();$('#fpDrop').onclick=()=>$('#fontFile').click();
+const isFontDrag=e=>[...(e.dataTransfer&&e.dataTransfer.items||[])].some(i=>i.kind==='file')&&true;
+['dragenter','dragover'].forEach(ev=>$('#fontPanel').addEventListener(ev,e=>{if(!isFontDrag(e))return;e.preventDefault();e.stopPropagation();$('#fontPanel').classList.add('over')}));
+$('#fontPanel').addEventListener('dragleave',e=>{if(!$('#fontPanel').contains(e.relatedTarget))$('#fontPanel').classList.remove('over')});
+$('#fontPanel').addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();$('#fontPanel').classList.remove('over');uploadFonts([...e.dataTransfer.files])});
+addEventListener('drop',e=>{const fs=[...(e.dataTransfer&&e.dataTransfer.files||[])];if(fs.length&&fs.every(f=>/\.(ttf|otf|woff2?)$/i.test(f.name))){e.preventDefault();e.stopPropagation();uploadFonts(fs)}},true);
+$('#fontFile').onchange=e=>{uploadFonts([...e.target.files]);e.target.value=''};
+IDB.get('fonts').then(async l=>{if(!Array.isArray(l))return;upFonts=l;for(const f of l)await addFontData(f.name,f.buf.slice(0));try{refreshFonts()}catch{}$('#fontPanel')._cur=null;try{renderFontPanel()}catch{}warpCache.clear();draw()}).catch(()=>{});
 let saveStamp=0;function saveNow(){try{snapTab();const allO=tabs.flatMap(t=>t.objs);saveStamp=Date.now();const full={t:saveStamp,doc,objs,cur:curTab,tabs:tabs.map(t=>({doc:t.doc,objs:t.objs})),images:usedImages(allO),uploads:uploads.filter(k=>images[k]).map(k=>[k,images[k]])};return IDB.put('doc',full).catch(()=>{})}catch(e){}}
 let saveT;function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(()=>{snapTab();const allO=tabs.flatMap(t=>t.objs);const base={doc,objs,cur:curTab,tabs:tabs.map(t=>({doc:t.doc,objs:t.objs})),images:usedImages(allO)},ups=uploads.filter(k=>images[k]).slice(0,12).map(k=>[k,images[k]]);
  const tries=[{...base,uploads:ups},{...base,uploads:ups.slice(0,4)},{...base,uploads:[]}];let ok=false;
