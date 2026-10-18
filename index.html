@@ -540,7 +540,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-C</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-D</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -1440,6 +1440,33 @@ function warpMap(st,u,v,b,amp){switch(st){
  case 'fisheye':case 'inflate':{const r=Math.hypot(u,v);if(r>=1||r===0)return[u,v];const k=st==='fisheye'?1/(1+b*.8*(1-r*r)):1/(1+b*.5*(1-r*r)*(1+.0));return[u*k,v*k]}
  case 'squeeze':return[u*(1+b*.25*(1-v*v)),v/(1-b*.45*(1-u*u)||1)];
  case 'twist':{const r=Math.min(1,Math.hypot(u,v)),a=b*Math.PI*.6*(1-r),cs=Math.cos(a),sn=Math.sin(a);return[u*cs-v*sn,u*sn+v*cs]}}return[u,v]}
+function paintWarp(c,o){const wp=o.warp,b=tN(wp.bend,50)/100,hd=tN(wp.h,0)/100,vd=tN(wp.v,0)/100,st=wp.style,vert=wp.dir==='v';
+ layout(o);const L=o._L||[],hs=tN(o.hs,100)/100||1,vs=tN(o.vs,100)/100||1,W=o.w/hs,iL=tN(o.indL,0),iR=tN(o.indR,0),iF=tN(o.indF,0),bs=tN(o.bs,0),base=c.fillStyle,G=[];
+ c.save();c.translate(-o.w/2,-o.h/2);c.scale(hs,vs);setLs(c,o.ls);c.textBaseline='alphabetic';c.textAlign='left';
+ const al=o.align||'left',just=al[0]==='j';
+ L.forEach(l=>{const lx=iL+(l.first?iF:0),avail=W-iL-iR-(l.first?iF:0),spaces=l.toks.filter(t=>t.sp).length;let x,gap=0;const doJ=just&&(!l.last||al==='ja')&&spaces>0;
+  if(doJ){x=lx;gap=(avail-l.w)/spaces}else{const a=just?(al==='jc'?'center':al==='jr'?'right':'left'):al;x=a==='center'?lx+(avail-l.w)/2:a==='right'?lx+avail-l.w:lx}
+  const yB=l.y+(l.lh-l.mx)/2+l.mx*.82-bs;
+  for(const t of l.toks){for(const sg of t.segs){const k=sg.k?JSON.parse(sg.k):null,f=segFont(o,k),txt=f.up?sg.t.toUpperCase():sg.t;c.font=f.font;
+    for(const ch of txt){const w=c.measureText(ch).width;if(!t.sp)G.push({ch,font:f.font,fill:k&&k.fill?f.fill:base,b:f.b,size:f.size,x,w,yB});x+=w}}if(t.sp)x+=gap}});
+ if(!G.length){c.restore();return}
+ let mn=1e9,mx=-1e9;G.forEach(g=>{mn=Math.min(mn,g.x);mx=Math.max(mx,g.x+g.w)});const cx=(mn+mx)/2,A=Math.max(1,(mx-mn)/2),H=o.size,sg=b<0?-1:1,ab=Math.abs(b);
+ const curve={flag:u=>-b*H*.6*Math.sin(Math.PI*u),wave:u=>-b*H*.5*Math.sin(2*Math.PI*u),rise:u=>-b*A*.45*u,fish:u=>-b*H*.25*Math.sin(Math.PI*u)}[st];
+ G.forEach(g=>{const gx=g.x+g.w/2,u=(gx-cx)/A;let dx=0,dy=0,rot=0,sx=1,sy=1,anc=-.35;
+  if(!vert){
+   if(st==='arc'||st==='arch'){const Th=(st==='arch'?1.7:1)*Math.PI*ab;if(Th>1e-3){const R=A/(Th/2),ph=(gx-cx)/R;dx=cx+R*Math.sin(ph)-gx;dy=sg*R*(1-Math.cos(ph));rot=sg*ph}}
+   else if(st==='arcLower'||st==='shellLower'){sy=1+b*(st==='arcLower'?.6*(1-u*u):.8*u*u);anc=-.72}
+   else if(st==='arcUpper'||st==='shellUpper'){sy=1+b*(st==='arcUpper'?.6*(1-u*u):.8*u*u);anc=0}
+   else if(st==='bulge'){sy=1+b*.6*(1-u*u)}
+   else if(st==='squeeze'){sy=1+b*.45*(1-u*u);sx=1-b*.25*(1-u*u)}
+   else if(st==='fisheye'||st==='inflate'){const s=1+b*(st==='fisheye'?.7:.4)*(1-u*u);sx=sy=s}
+   else if(st==='twist'){rot=b*.9*u}
+   if(curve){const e=.01;dy=curve(u);rot=Math.atan((curve(u+e)-curve(u-e))/(2*e*A));if(st==='fish')sy=1+b*.45*(1-u*u)}
+  }else{sy=1+b*.7*u;sx=1+b*.15*u}
+  sx*=1+hd*.5*u;sy*=1+hd*.5*u;sy*=1+vd*.5*Math.sign(u||1)*.0+vd*.4;
+  const ay=g.yB+anc*g.size;c.save();c.translate(gx+dx,ay+dy);c.rotate(rot);c.scale(sx,sy);c.font=g.font;c.fillStyle=g.fill;c.fillText(g.ch,-g.w/2,g.yB-ay);
+  if(g.b){c.lineWidth=g.size*.035;c.strokeStyle=g.fill;c.strokeText(g.ch,-g.w/2,g.yB-ay)}c.restore()});
+ c.restore()}
 function drawWarped(c,o){const wp=o.warp,b=tN(wp.bend,50)/100,hd=tN(wp.h,0)/100,vd=tN(wp.v,0)/100,vert=wp.dir==='v',st=wp.style;
  const key=JSON.stringify([o.text,o.font,o.size,o.weight,o.w,o.h,o.align,o.lh,o.ls,o.italic,o.upper,o.fill,o.hs,o.vs,o.bs,o.indL,o.indR,o.indF,o.list,o.fauxBold,o.underline,o.strike,o.smallcaps,o.sup,o.sub,o.spB,o.spA,o.runs,wp]);
  let hit=warpCache.get(o.id);
@@ -1611,7 +1638,7 @@ function drawShape(c,o,exp){
   case 'triangle':c.beginPath();c.moveTo(0,y);c.lineTo(x+w,y+h);c.lineTo(x,y+h);c.closePath();paint(c,o);break;
   case 'diamond':c.beginPath();c.moveTo(0,y);c.lineTo(x+w,0);c.lineTo(0,y+h);c.lineTo(x,0);c.closePath();paint(c,o);break;
   case 'star':c.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,k=i%2?.45:1;c[i?'lineTo':'moveTo'](Math.cos(a)*w/2*k,Math.sin(a)*h/2*k)}c.closePath();paint(c,o);break;
-  case 'text':{c.shadowColor=o.shadow?'rgba(0,0,0,.35)':'transparent';c.fillStyle=o.fill;if(warpOn(o)){drawWarped(c,o);break}paintText(c,o,'fill',0);break}
+  case 'text':{c.shadowColor=o.shadow?'rgba(0,0,0,.35)':'transparent';c.fillStyle=o.fill;if(warpOn(o)){paintWarp(c,o);break}paintText(c,o,'fill',0);break}
   case 'image':{c.beginPath();if(o.circle)c.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);else rr(c,x,y,w,h,o.radius);
    const live=liveMap.get(o.id),im=live||(o.src&&getImg(o.src)),IW=live?live.width:(im&&im.complete?im.naturalWidth:0),IH=live?live.height:(im?im.naturalHeight:0);
    if(im&&IW){if(o.shadow){c.fillStyle='rgba(0,0,0,.01)';c.fill()}c.shadowColor='transparent';c.save();c.clip();const ir=IW/IH,br=w/h;let dw,dh;if((o.fit==='contain')===(ir>br)){dw=w;dh=w/ir}else{dh=h;dw=h*ir}let pim=im;if(!live&&hasPE(o))try{pim=peRender(o,im)}catch(err){console.error(err)}c.drawImage(pim,-dw/2,-dh/2,dw,dh);c.restore()}
