@@ -562,7 +562,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-T</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.17-V</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -1261,7 +1261,7 @@ const TEMPLATES=[
  tips:(p,v)=>({h:470,o:y=>[R(0,y,W,470,p.bg,{name:'Tips bg'}),...[0,1,2,3].flatMap(i=>{const x=30+(i%2)*280,yy=y+30+Math.floor(i/2)*220;return[R(x,yy,260,200,i%3?p.soft:p.acc,{radius:14,name:'Tip card'}),T(v.items[i],x+18,yy+20,140,24,{font:'Lora',weight:700,fill:i%3?p.ink:(p.accFg||'#ffffff'),lh:1.1}),I(x+150,yy+20,95,160,{radius:10,name:'Tip photo '+(i+1)})]})]}),
  footer:(p,v)=>({h:200,o:y=>[R(0,y,W,200,p.foot||p.ink,{name:'Footer'}),...[0,1,2,3].map(i=>E(222+i*42,y+30,30,30,p.acc,{name:'Social icon'})),T((v.brand||'Your Brand')+'  ·  123 Main St, Quezon City',0,y+85,W,13,{fill:'#d6d6d6',align:'center'}),T('You received this email because you signed up on our website.',0,y+112,W,11,{fill:'#a8a8a8',align:'center'}),T('Unsubscribe   ·   Update preferences   ·   View online',0,y+140,W,12,{fill:'#ffffff',align:'center',weight:600})]}),
  };
- const mkEmail=(id,name,p,blocks)=>{const build=()=>{let y=0;const objs=[];for(const[k,v]of blocks){const b=B[k](p,v||{});objs.push(...b.o(y));y+=b.h}return{objs,h:y}};const h=build().h;return{id,cat:'Email',name,w:W,h,bg:p.bg,build:()=>build().objs}};
+ const mkEmail=(id,name,p,blocks)=>{const SN={header:'Header',hero:'Hero',heroBig:'Hero',bar:'Top bar',imgText:'Image + text',text:'Text',features:'Features',products:'Products',tips:'Tips',offer:'Offer',footer:'Footer',cta:'Call to action',gallery:'Gallery',quote:'Quote',stats:'Stats',divider:'Divider'};const build=()=>{let y=0;const objs=[];blocks.forEach(([k,v],i)=>{const b=B[k](p,v||{}),os=b.o(y);os.forEach(o=>{o._sec=i;o._secName=SN[k]||(k[0].toUpperCase()+k.slice(1))});objs.push(...os);y+=b.h});return{objs,h:y}};const h=build().h;return{id,cat:'Email',name,w:W,h,bg:p.bg,build:()=>build().objs}};
  const P={
  pet:{bg:'#fff7ec',bg2:'#ffe8c7',soft:'#fdebd3',ink:'#3b2416',mut:'#7a6250',acc:'#e07a2f'},
  sleep:{bg:'#ffffff',bg2:'#ece9ff',soft:'#f2f0ff',ink:'#2b2a6b',mut:'#6b6a8f',acc:'#6c63ff'},
@@ -1727,7 +1727,8 @@ cv.addEventListener('pointerdown',e=>{
  const bsel=sel.map(getObj).filter(q=>q&&q.knock&&q.visible&&!q.locked&&hit(q,x,y));const o=bsel.length?bsel[bsel.length-1]:hitTop(x,y);
  if(o){
   if(e.shiftKey||e.metaKey||e.ctrlKey)sel=sel.includes(o.id)?sel.filter(i=>i!==o.id):[...sel,o.id];
-  else if(!sel.includes(o.id))sel=[o.id];
+  else if(!sel.includes(o.id)){const gm=o.gid?objs.filter(q=>q.gid===o.gid&&!q.locked&&q.visible):[];sel=gm.length>1&&!sel.some(i=>gm.some(q=>q.id===i))?gm.map(q=>q.id):[o.id]}
+  else if(o.gid&&sel.length>1){const gm=objs.filter(q=>q.gid===o.gid&&!q.locked&&q.visible);if(gm.length===sel.length&&gm.every(q=>sel.includes(q.id)))window.__drill=o.id}
   let movers=withBurn(sel.map(getObj).filter(m=>m&&!m.locked));let done=false;
   if(e.altKey&&movers.length){pushHist();done=true;const d=movers.map(m=>({...m,id:'o'+(uid++),name:m.name+' copy'}));objs.push(...d);sel=d.map(m=>m.id);movers=d}
   drag={mode:'move',sx:x,sy:y,items:movers.map(m=>({o:m,x:m.x,y:m.y})),done};renderAll();return}
@@ -1768,6 +1769,8 @@ cv.addEventListener('pointerup',()=>{
  if(d.mode==='brush'){brushUp();return}
  if(d.mode==='rbg'){rbRender(true);return}
  if(d.mode==='create'){if(d.o.w<5&&d.o.h<5){d.o.w=d.o.h=Math.min(doc.w,doc.h)*.25;d.o.x-=d.o.w/2;d.o.y-=d.o.h/2}setTool('move')}
+ if(d.mode==='move'&&!d.done&&window.__drill){sel=[window.__drill];window.__drill=null;renderAll();return}window.__drill=null;
+ if(d.mode==='move'&&d.done&&d.items&&d.items.length){const gs=new Set(d.items.map(it=>it.o.gid));if(gs.size===1){const gid=[...gs][0];if(gid&&objs.filter(o=>o.gid===gid).every(o=>d.items.some(it=>it.o===o))&&restackByY(gid))toast('Section moved')}}
  if(d.mode==='marquee'){const l=Math.min(d.sx,d.x),r=Math.max(d.sx,d.x),t=Math.min(d.sy,d.y),b=Math.max(d.sy,d.y);if(r-l>2||b-t>2){const add=objs.filter(o=>{if(!o.visible||o.locked)return false;const a=aabb(o);return a.l<r&&a.r>l&&a.t<b&&a.b>t}).map(o=>o.id);sel=[...new Set([...sel,...add])]}}
  renderAll();
 });
@@ -2287,12 +2290,15 @@ function nudge(dx,dy){const os=withBurn(sel.map(getObj).filter(o=>o&&!o.locked))
 
 /* ---------- templates / sections ---------- */
 function loadTemplate(t){pushHist();if(editing)endEdit();doc.w=t.w;doc.h=t.h;doc.bg=t.bg||'#ffffff';doc.name=t.name;doc.web=t.web||null;
- if(t.build){objs=t.build();doc.groups=t.groups?t.groups():autoGroup(objs);mirrorOrder()}else{Object.assign(images,t.images||{});objs=t.objs.map(o=>({...o,id:'o'+(uid++)}));doc.groups=JSON.parse(JSON.stringify(t.groups||[]))}
+ if(t.build){objs=t.build();if(objs.some(o=>o._sec!=null)){const base='s'+Date.now().toString(36),gs=[];objs.forEach(o=>{if(o._sec==null||isBgLayer(o)){delete o._sec;delete o._secName;return}const id=base+o._sec;if(!gs.find(g=>g.id===id))gs.push({id,name:o._secName,open:false});o.gid=id;delete o._sec;delete o._secName});doc.groups=gs}else{doc.groups=t.groups?t.groups():autoGroup(objs);if(t.cat==='Email')sectionize()}mirrorOrder()}else{Object.assign(images,t.images||{});objs=t.objs.map(o=>({...o,id:'o'+(uid++)}));doc.groups=JSON.parse(JSON.stringify(t.groups||[]))}
  sel=[];syncDocUI();fit();renderAll();toast(`${t.name} loaded. Ctrl+Z to go back.`)}
-function adoptLoose(){const secs=groups().map(g=>{const m=objs.filter(o=>o.gid===g.id&&o.visible);if(!m.length)return null;const b=bounds(m);return b.r-b.l>=doc.w*.85?{g,b}:null}).filter(Boolean);if(!secs.length)return;
+function sectionize(){const gs=groups();objs.forEach(o=>{if(o.gid||isBgLayer(o)||o.clip)return;const a=aabb(o);if(o.type!=='text'&&a.r-a.l>=doc.w*.85&&a.b-a.t<doc.h*.6){const id='g'+Date.now().toString(36)+gs.length;o.gid=id;gs.push({id,name:o.name||'Section',open:false})}});doc.groups=gs;adoptLoose();
+ const loose=objs.filter(o=>!o.gid&&!isBgLayer(o)&&!o.clip).map(o=>({o,a:aabb(o)})).sort((x,y)=>x.a.t-y.a.t);let cur=null;loose.forEach(x=>{if(!cur||x.a.t>cur.b+24){const id='g'+Date.now().toString(36)+'L'+doc.groups.length;cur={id,b:x.a.b};doc.groups.push({id,name:'Section',open:false})}x.o.gid=cur.id;cur.b=Math.max(cur.b,x.a.b)});const ng=doc.groups.filter(g=>g.name==='Section');if(ng.length){const last=ng[ng.length-1];const m=objs.filter(o=>o.gid===last.id);if(m.length&&bounds(m).t>doc.h*.7)last.name='Footer'}}
+function isStacked(skip){const secs=groups().filter(g=>g.id!==skip).map(g=>{const m=objs.filter(o=>o.gid===g.id&&o.visible);if(!m.length)return null;const b=bounds(m);return b}).filter(Boolean).sort((a,b)=>a.t-b.t);if(secs.length<(skip?1:2))return false;if(doc.web||doc.w<=800)return true;let cov=0;for(let i=0;i<secs.length;i++){if(i&&secs[i].t<secs[i-1].b-4)return false;cov+=secs[i].b-secs[i].t}return cov>=doc.h*.7}
+function adoptLoose(){objs.forEach(o=>{if(o.type==='text')try{layout(o)}catch{}});const secs=groups().map(g=>{const m=objs.filter(o=>o.gid===g.id&&o.visible);if(!m.length)return null;const b=bounds(m);return b.r-b.l>=doc.w*.85?{g,b}:null}).filter(Boolean);if(!secs.length)return;
  objs.forEach(o=>{if(o.gid||isBgLayer(o)||o.clip)return;const a=aabb(o),cy=(a.t+a.b)/2;if(a.b-a.t>doc.h*.6)return;const s=secs.find(x=>cy>=x.b.t-1&&cy<=x.b.b+1);if(s)o.gid=s.g.id});
  objs.forEach((o,i)=>{if(o.clip&&i>0&&!o.gid){let j=i-1;while(j>=0&&objs[j].clip)j--;if(j>=0&&objs[j].gid)o.gid=objs[j].gid}})}
-function mirrorOrder(){adoptLoose();const bg=objs.filter(isBgLayer),rest=objs.filter(o=>!isBgLayer(o));const units=[];const seen=new Map();
+function mirrorOrder(){objs.forEach(o=>{if(o.type==='text')try{layout(o)}catch{}});adoptLoose();const bg=objs.filter(isBgLayer),rest=objs.filter(o=>!isBgLayer(o));const units=[];const seen=new Map();
  rest.forEach(o=>{if(o.gid){if(!seen.has(o.gid)){const u={ids:[]};seen.set(o.gid,u);units.push(u)}seen.get(o.gid).ids.push(o)}else units.push({ids:[o]})});
  units.forEach(u=>u.b=bounds(u.ids.filter(o=>o.visible).length?u.ids.filter(o=>o.visible):u.ids));
  const ov=(a,b)=>a.l<b.r-1&&a.r>b.l+1&&a.t<b.b-1&&a.b>b.t+1;
@@ -2311,8 +2317,11 @@ function insertSection(id,atY){const sc=typeof id==='object'?id:SECTIONS.find(s=
  const at=before.length?Math.max(...before.map(o=>objs.indexOf(o)))+1:Math.max(0,objs.findIndex(o=>!isBgLayer(o)));objs.splice(at<0?objs.length:at,0,...list);mirrorOrder();
  sel=list.map(o=>o.id);syncDocUI();renderAll();toast(`${sc.name} added. Everything below moved down ${Math.round(h)}px.`)}
 const isSectionBlock=m=>{const v=m.filter(o=>o.visible);if(!v.length)return false;const b=bounds(v);return b.r-b.l>=doc.w*.85};
-function restackSections(){const blocks=groups().map(g=>{const m=objs.filter(o=>o.gid===g.id);return m.length&&isSectionBlock(m)?{m,b:bounds(m.filter(o=>o.visible)),z:Math.max(...m.map(o=>objs.indexOf(o)))}:null}).filter(Boolean);if(blocks.length<2)return;
- let y=Math.min(...blocks.map(x=>x.b.t));blocks.sort((a,b)=>b.z-a.z).forEach(x=>{const dy=y-x.b.t;x.m.forEach(o=>o.y+=dy);y+=x.b.b-x.b.t});mirrorOrder();toast('Section moved')}
+function restackByY(gid){if(!isStacked(gid))return false;const blocks=groups().map(g=>{const m=objs.filter(o=>o.gid===g.id);if(!m.length)return null;const v=m.filter(o=>o.visible);return{g,m,b:bounds(v.length?v:m)}}).filter(Boolean);if(blocks.length<2)return false;
+ const others=blocks.filter(x=>x.g.id!==gid);let y=Math.max(0,Math.min(...others.map(x=>x.b.t)));blocks.sort((a,b)=>(a.b.t+a.b.b)/2-(b.b.t+b.b.b)/2).forEach(x=>{const dy=y-x.b.t;x.m.forEach(o=>o.y+=dy);y+=x.b.b-x.b.t});mirrorOrder();return true}
+function restackSections(){const blocks=groups().map(g=>{const m=objs.filter(o=>o.gid===g.id);if(!m.length)return null;const v=m.filter(o=>o.visible);return{m,b:bounds(v.length?v:m),z:Math.max(...m.map(o=>objs.indexOf(o)))}}).filter(Boolean);if(blocks.length<2)return;
+ const byPage=blocks.slice().sort((a,b)=>a.b.t-b.b.t);byPage.forEach((x,i)=>{const nx=byPage[i+1];x.slot=nx?Math.max(x.b.b-x.b.t,nx.b.t-x.b.t):x.b.b-x.b.t});
+ let y=byPage[0].b.t;blocks.sort((a,b)=>b.z-a.z).forEach(x=>{const dy=y-x.b.t;x.m.forEach(o=>o.y+=dy);y+=x.slot});mirrorOrder();toast('Section moved')}
 function moveSection(dir){const ss=objs.filter(o=>sel.includes(o.id));if(!ss.length)return;
  const gid=ss[0].gid,mineObjs=gid?objs.filter(o=>o.gid===gid):ss,mb=bounds(mineObjs);
  const blocks=groups().filter(g=>g.id!==gid).map(g=>{const m=objs.filter(o=>o.gid===g.id);return m.length?{m,b:bounds(m)}:null}).filter(Boolean).filter(x=>x.b.r-x.b.l>=doc.w*.5);
@@ -2582,7 +2591,7 @@ L.addEventListener('drop',e=>{e.preventDefault();if(layerPayload&&layerPayload.f
  const above=li.classList.contains('dropTop');const moving=src.startsWith('g:')?objs.filter(o=>o.gid===src.slice(2)):[getObj(src)].filter(Boolean);if(!moving.length){renderLayers();return}
  const tgt=li.dataset.gid?objs.filter(o=>o.gid===li.dataset.gid):[getObj(li.dataset.id)].filter(Boolean);if(!tgt.length||tgt.some(t=>moving.includes(t))){renderLayers();return}
  pushHist();if(!src.startsWith('g:')){const t=tgt[0];if(li.classList.contains('child'))moving[0].gid=t.gid;else delete moving[0].gid}
- objs=objs.filter(o=>!moving.includes(o));const idx=tgt.map(t=>objs.indexOf(t));let ti=above?Math.max(...idx)+1:Math.min(...idx);if(!moving.some(m=>m.clip))while(objs[ti]&&objs[ti].clip)ti++;objs.splice(ti,0,...moving);if(src.startsWith('g:')&&isSectionBlock(moving))restackSections();renderAll()});
+ objs=objs.filter(o=>!moving.includes(o));const idx=tgt.map(t=>objs.indexOf(t));let ti=above?Math.max(...idx)+1:Math.min(...idx);if(!moving.some(m=>m.clip))while(objs[ti]&&objs[ti].clip)ti++;objs.splice(ti,0,...moving);if(src.startsWith('g:')&&isStacked())restackSections();renderAll()});
 L.addEventListener('dragend',()=>{dragLayer=null;$$('#layers li').forEach(l=>l.classList.remove('dropTop','dropBot'))});
 const fxM=$('#fxMenu'),nwM=$('#newMenu');
 function closeMenus(){fxM.hidden=nwM.hidden=true;$$('.layerbar button').forEach(b=>b.classList.remove('open'))}
