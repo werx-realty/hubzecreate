@@ -577,7 +577,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.18-C</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.18-D</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -2215,7 +2215,7 @@ function useTab(i,quiet){const t=tabs[i];curTab=i;doc=t.doc;objs=t.objs;undoS=t.
  if(t.view&&t.view.z){Object.assign(view,t.view)}else fit();syncDocUI();fixUid();
  if(quiet){draw();renderProps();renderTabs()}else renderAll()}
 function switchTab(i){if(i===curTab||!tabs[i])return;snapTab();useTab(i,deferLayers)}
-function newTab(d,list){snapTab();if((!list||!list.length)&&d.bg&&d.bg!=='transparent')list=[BG(d.w,d.h,d.bg)];tabs.push({doc:d,objs:list||[],undoS:[],redoS:[],sel:[],view:null});useTab(tabs.length-1);fit()}
+let bootDirty=false,bootTabs=0;function newTab(d,list){bootDirty=true;snapTab();if((!list||!list.length)&&d.bg&&d.bg!=='transparent')list=[BG(d.w,d.h,d.bg)];tabs.push({doc:d,objs:list||[],undoS:[],redoS:[],sel:[],view:null});useTab(tabs.length-1);fit()}
 function closeTab(i){if(tabs.length===1){tabs[0]={doc:{name:'Untitled',w:1275,h:1650,bg:'#ffffff',groups:[]},objs:[],undoS:[],redoS:[],sel:[],view:null};useTab(0);fit();return}
  snapTab();tabs.splice(i,1);if(curTab>=tabs.length)curTab=tabs.length-1;else if(i<curTab)curTab--;useTab(curTab)}
 function renderTabs(){const el=$('#tabbar');if(!el)return;el.innerHTML=tabs.map((t,i)=>{const d=i===curTab?doc:t.doc;return`<div class="dtab${i===curTab?' on':''}" data-tab="${i}" title="${esc(d.name)} · ${d.w}×${d.h}"><span>${esc(d.name)} <small>${d.w}×${d.h}</small></span><button class="dtx" data-tabx="${i}" title="Close tab">×</button></div>`}).join('')+'<button class="dtab add" id="tabAdd" title="New tab">+</button>'}
@@ -3845,9 +3845,11 @@ try{const s=JSON.parse(localStorage.getItem('afs:doc')||'null');if(s&&s.doc&&s.o
 if(!loaded){const t=TEMPLATES[0];doc={name:t.name,w:t.w,h:t.h,bg:'#ffffff'};objs=t.build()}
 if(!Array.isArray(doc.groups))doc.groups=autoGroup(objs);
 if(!tabs.length)tabs=[{doc,objs,undoS:[],redoS:[],sel:[],view:null}];
-let lsStamp=0;try{lsStamp=(JSON.parse(localStorage.getItem('afs:doc')||'null')||{}).t||0}catch{}
-IDB.get('doc').then(s=>{if(!s||!s.doc||!s.objs||!(s.t>lsStamp)||saveStamp>s.t)return;Object.assign(images,s.images||{});(s.uploads||[]).forEach(([k,v])=>{images[k]=v;if(!uploads.includes(k))uploads.push(k)});
- const ts=Array.isArray(s.tabs)&&s.tabs.length?s.tabs:[{doc:s.doc,objs:s.objs}];tabs=ts.map(t=>({doc:t.doc,objs:t.objs,undoS:[],redoS:[],sel:[],view:null}));tabs.forEach(t=>{objs=t.objs;fixUid();if(!Array.isArray(t.doc.groups))t.doc.groups=autoGroup(t.objs)});useTab(clamp(s.cur||0,0,tabs.length-1));try{renderUploads()}catch{}renderAll()}).catch(()=>{});
+bootTabs=tabs.length;let lsStamp=0;try{lsStamp=(JSON.parse(localStorage.getItem('afs:doc')||'null')||{}).t||0}catch{}
+IDB.get('doc').then(s=>{if(!s||!s.doc||!s.objs||!(s.t>lsStamp)||(saveStamp>s.t&&!bootDirty))return;Object.assign(images,s.images||{});(s.uploads||[]).forEach(([k,v])=>{images[k]=v;if(!uploads.includes(k))uploads.push(k)});
+ const ts=Array.isArray(s.tabs)&&s.tabs.length?s.tabs:[{doc:s.doc,objs:s.objs}];const rest=ts.map(t=>({doc:t.doc,objs:t.objs,undoS:[],redoS:[],sel:[],view:null}));
+ if(bootDirty){snapTab();const mine=tabs.slice(bootTabs);tabs=rest.concat(mine);tabs.forEach(t=>{objs=t.objs;fixUid();if(!Array.isArray(t.doc.groups))t.doc.groups=autoGroup(t.objs)});useTab(tabs.length-1);try{renderUploads()}catch{}renderAll();return}
+ tabs=rest;tabs.forEach(t=>{objs=t.objs;fixUid();if(!Array.isArray(t.doc.groups))t.doc.groups=autoGroup(t.objs)});useTab(clamp(s.cur||0,0,tabs.length-1));try{renderUploads()}catch{}renderAll()}).catch(()=>{});
 collapsed=new Set(allCats());
 try{adoptLoose()}catch{}
 try{tabs.forEach(t=>((t.doc&&t.doc.groups)||[]).forEach(g=>g.open=false));groups().forEach(g=>g.open=false)}catch{}
@@ -4094,7 +4096,7 @@ async function importSiteHtml(html,name,assets=new Map(),css=new Map()){const ge
  const src=prepHtml(html,assets,css),fs=fontSources(src);injectFontSources(fs);
  const f=await siteFrame(src,gen&&pw?+pw:SITE_W);let X;try{await settleFrame(f);X=await extractSite(f);
   const r=await buildSiteLayers(X,fs);
-  const d={name,w:X.W,h:Math.round(X.H),bg:X.bg,groups:r.groups,site:{fontLinks:fs.links,fontCss:fs.css}};newTab(d,r.list);fixUid();renderAll();fit();
+  const d={name,w:X.W,h:Math.round(X.H),bg:X.bg,groups:r.groups,site:{fontLinks:fs.links,fontCss:fs.css}};newTab(d,r.list);fixUid();renderAll();fit();try{saveNow()}catch{}
   const nT=r.list.filter(o=>o.type==='text').length,nI=r.list.filter(o=>o.type==='image').length,miss=r.list.filter(o=>/^Missing: /.test(o.name)).length;
   toast(`Opened ${name}: ${r.list.length} layers in ${r.groups.length} sections`+(miss?` · ${miss} picture${miss>1?'s':''} missing — open them together with the HTML`:''));return{layers:r.list.length,text:nT,images:nI,sections:r.groups.length,missing:miss}}
  finally{if(!window.__hzKeepFrame)f.remove();else window.__hzFrame=f}}
@@ -4176,7 +4178,7 @@ window.__site={importSiteHtml,siteHtml,extractSite,settleFrame,siteFrame,prepHtm
  fj.onchange=async e=>{const fl=[...e.target.files];if(!fl.length)return;if(fl.some(f=>/\.html?$/i.test(f.name))){e.target.value='';await importSiteFiles(fl);return}
   const p=fl.find(f=>/\.psd$/i.test(f.name));if(p){e.target.value='';snapTab();newTab({name:p.name.replace(/\.psd$/i,''),w:1440,h:900,bg:'#ffffff',groups:[]},[]);await importPsd(p);$('#tplModal').hidden=true;return}
   const im=fl.find(f=>f.type.startsWith('image/'));if(im&&!fl.some(f=>/\.json$/i.test(f.name))){e.target.value='';importTemplateFile(im);return}
-  oldJ.call(fj,e)};
+  const js=fl.find(f=>/\.json$/i.test(f.name)||f.type==='application/json');e.target.value='';if(!js)return;try{const d=JSON.parse(await js.text());if(!d.doc||!d.objs)throw 0;Object.assign(images,d.images||{});if(!Array.isArray(d.doc.groups))d.doc.groups=[];newTab(d.doc,d.objs);fixUid();renderAll();fit();saveNow();toast('Project opened')}catch{toast('That file isn’t a HUBZE Studio project.')}};
  const ft=$('#fileTpl');ft.setAttribute('accept','.psd,.pdf,.json,.svg,.html,.htm,.css,.js,image/*');const oldT=ft.onchange;ft.onchange=async e=>{const fl=[...e.target.files];if(fl.some(f=>/\.html?$/i.test(f.name))){e.target.value='';await importSiteFiles(fl);return}oldT.call(ft,e)};
  const sm=$('#saveMenu');sm.querySelector('[data-sv="html"]').insertAdjacentHTML('beforebegin','<button data-sv="site">Website HTML (.html)</button>');
  $('#exFmt').insertAdjacentHTML('afterbegin','');$('#exFmt').querySelector('option[value="html"]').insertAdjacentHTML('beforebegin','<option value="site">Website HTML (editable)</option>');
@@ -4208,6 +4210,14 @@ window.__site={importSiteHtml,siteHtml,extractSite,settleFrame,siteFrame,prepHtm
    const was=swallow.has(e.pointerId);tp.delete(e.pointerId);if(tp.size<2)pinch=null;if(was){swallow.delete(e.pointerId);if(drag&&drag.mode==='pan'){drag=null;cv.style.cursor=''}e.stopImmediatePropagation()}}};
  host.addEventListener('pointerup',up,true);host.addEventListener('pointercancel',up,true);
  cv.addEventListener('dblclick',e=>{if(e.isTrusted&&Date.now()-lastDbl<500)e.stopImmediatePropagation()},true);}
+
+/* ---------- diagnostics: show real errors + detect Safari crash-reloads ---------- */
+{let crashed=false;try{crashed=sessionStorage.getItem('hz:alive')==='1'}catch{}try{sessionStorage.setItem('hz:alive','1')}catch{}
+ addEventListener('pagehide',()=>{try{sessionStorage.removeItem('hz:alive')}catch{}});
+ const showErr=m=>{let b=document.getElementById('hzErr');if(!b){b=document.createElement('div');b.id='hzErr';b.style.cssText='position:fixed;left:50%;top:60px;transform:translateX(-50%);max-width:90vw;z-index:99999;background:#2f7bff;color:#fff;font:13px/1.4 system-ui;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4)';b.onclick=()=>b.remove();document.body.appendChild(b)}b.textContent=m+'  (tap to close)'};
+ if(crashed)setTimeout(()=>showErr('The page restarted by itself (the browser ran out of memory). Tell Claude: "crash restart".'),1200);
+ addEventListener('error',e=>showErr('Error: '+(e.message||e)+(e.lineno?' @'+e.lineno:'')));
+ addEventListener('unhandledrejection',e=>showErr('Error: '+((e.reason&&e.reason.message)||e.reason)));}
 
 })();
 </script>
