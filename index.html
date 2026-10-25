@@ -577,7 +577,7 @@ h5+.fxsub{margin-top:0;padding-top:0;border-top:0}
 
  <footer id="status">
   <span><button id="zOut">−</button><span id="zoomPct">100%</span><button id="zIn">+</button><button id="zFit">Fit</button><button id="z100">100%</button></span>
-  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.18-B</span><span id="stSave"></span>
+  <span id="stDoc"></span><span id="stPos"></span><span id="stSel"></span><span class="sp"></span><span id="stVer" style="opacity:.6;margin-right:10px">v10.18-C</span><span id="stSave"></span>
  </footer>
 </div>
 
@@ -3084,7 +3084,7 @@ IDB.get('fonts').then(async l=>{if(!Array.isArray(l))return;upFonts=l;for(const 
 let saveStamp=0;function saveNow(){try{snapTab();const allO=tabs.flatMap(t=>t.objs);saveStamp=Date.now();const full={t:saveStamp,doc,objs,cur:curTab,tabs:tabs.map(t=>({doc:t.doc,objs:t.objs})),images:usedImages(allO),uploads:uploads.filter(k=>images[k]).map(k=>[k,images[k]])};return IDB.put('doc',full).catch(()=>{})}catch(e){}}
 let saveT;function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(()=>{snapTab();const allO=tabs.flatMap(t=>t.objs);const base={doc,objs,cur:curTab,tabs:tabs.map(t=>({doc:t.doc,objs:t.objs})),images:usedImages(allO)},ups=uploads.filter(k=>images[k]).slice(0,12).map(k=>[k,images[k]]);
  const tries=[{...base,uploads:ups},{...base,uploads:ups.slice(0,4)},{...base,uploads:[]}];let ok=false;
- saveNow();for(const t of tries){try{localStorage.setItem('afs:doc',JSON.stringify({...t,t:saveStamp}));ok=true;break}catch{}}
+ saveNow();const big=Object.values(base.images).reduce((a,v)=>a+(v?v.length:0),0)+ups.reduce((a,u)=>a+u[1].length,0)>3.5e6;if(big){try{localStorage.removeItem('afs:doc')}catch{}tries.length=0}for(const t of tries){try{localStorage.setItem('afs:doc',JSON.stringify({...t,t:saveStamp}));ok=true;break}catch{}}
  $('#stSave').textContent='Autosaved'},500)}
 addEventListener('visibilitychange',()=>{if(document.hidden)saveNow()});addEventListener('pagehide',()=>saveNow());addEventListener('blur',()=>saveNow());
 function fixUid(){objs.forEach(o=>{const n=parseInt(String(o.id).slice(1));if(n>=uid)uid=n+1})}
@@ -3235,9 +3235,10 @@ function drawList(c,list,exp,k,map=o=>o,skip=()=>false){const KN=new Map(),ids=n
  if(!skip(o)){const holes=KN.get(o.id);if(holes&&o.visible){const cv0=c.canvas,off=cnv(cv0.width,cv0.height),ox=off.getContext('2d');ox.setTransform(c.getTransform());drawObj(ox,map(o),exp,k);ox.globalCompositeOperation='destination-out';
    holes.forEach(t=>{if(t.visible)drawObj(ox,{...map(t),opacity:1,fx:null,shadow:0,fill:'#000'},exp,k)});c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(off,0,0);c.restore()}else drawObj(c,map(o),exp,k)}const kids=[];for(let j=i+1;j<list.length&&list[j].clip;j++)kids.push(list[j]);if(!kids.length||!o.visible)continue;
  /* draw the inside layers, then keep only what falls on the base layer's real pixels (letters, shapes, cutouts) */
- const cv0=c.canvas,tf=c.getTransform(),A=cnv(cv0.width,cv0.height),ax=A.getContext('2d');ax.setTransform(tf);kids.forEach(q=>drawObj(ax,map(q),exp,k));
- const M=cnv(cv0.width,cv0.height),mx=M.getContext('2d');mx.setTransform(tf);drawObj(mx,{...map(o),opacity:1,shadow:0,visible:true,fx:null,stroke:null,strokeW:0},exp,k);
+ const cv0=c.canvas,tf=c.getTransform(),A=poolCv(0,cv0.width,cv0.height),ax=A.getContext('2d');ax.setTransform(tf);kids.forEach(q=>drawObj(ax,map(q),exp,k));
+ const M=poolCv(1,cv0.width,cv0.height),mx=M.getContext('2d');mx.setTransform(tf);drawObj(mx,{...map(o),opacity:1,shadow:0,visible:true,fx:null,stroke:null,strokeW:0},exp,k);
  ax.setTransform(1,0,0,1,0,0);ax.globalCompositeOperation='destination-in';ax.drawImage(M,0,0);c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.drawImage(A,0,0);c.restore()}}
+const _pool=[];function poolCv(i,w,h){let c=_pool[i];if(!c)c=_pool[i]=document.createElement('canvas');if(c.width!==w||c.height!==h){c.width=w;c.height=h}else{const x=c.getContext('2d');x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.globalAlpha=1;x.clearRect(0,0,w,h)}return c}
 const clipBase=o=>{let i=objs.indexOf(o)-1;while(i>=0&&objs[i].clip)i--;return i>=0?objs[i]:null};
 function toggleClip(){if(sel.length>1){const os=sel.map(getObj).filter(Boolean).sort((a,b)=>objs.indexOf(a)-objs.indexOf(b)),base=os[0],kids=os.slice(1);
   if(kids.every(q=>q.clip&&clipBase(q)===base)){pushHist();kids.forEach(q=>q.clip=false);renderAll();toast('Taken out of the box');return}
